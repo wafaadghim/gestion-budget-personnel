@@ -1,0 +1,47 @@
+Fonctionnalités implémentées
+Page d'accueil avec options d'inscription et de connexion
+
+Système d'authentification complet avec hachage de mot de passe
+
+Création de groupes avec date/heure de création
+
+Gestion des dépenses avec montants en dinars tunisiens à 3 décimales
+
+Système d'invitation avec acceptation/refus
+
+Calcul automatique des parts de chaque membre
+
+Profil utilisateur affichant les groupes et dépenses
+
+Catégorisation automatique des dépenses avec NLP/ML
+
+Interface moderne et responsive avec Bootstrap
+Utilisation de NLP/ML
+L'application utilise NLTK et scikit-learn pour catégoriser automatiquement les dépenses en fonction de leur description. 
+Le système 
+compare la similarité cosinus entre les mots de la description et une base de mots-clés prédéfinis pour chaque catégorie.
+
+Page d'ajout de dépense après acceptation d'invitation : Redirection vers un formulaire spécial après acceptation d'une invitation
+
+Tableau des balances : Affichage des soldes de chaque membre (qui doit payer/recevoir)
+
+Désactivation de l'auto-complétion : Ajout de autocomplete="off" sur tous les formulaires
+
+Calcul des balances : Calcul automatique de ce que chaque membre doit payer ou recevoir
+
+Affichage visuel des balances : Badges colorés (vert pour créditeur, rouge pour débiteur)
+
+Fonctionnalités ajoutées
+Date de fin de groupe : Ajout d'un champ pour définir la date et l'heure de fin du groupe
+
+Gestion des groupes expirés :
+
+Désactivation des ajouts de dépenses
+
+Désactivation des invitations
+
+Affichage d'un message d'avertissement
+
+Filtrage automatique : Suppression des invitations pour les groupes expirés
+
+Affichage de l'état

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Rapports - Gestion des Dépenses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Rapports et Statistiques</h1>
+</div>
+
+<div class="row">
+    <!-- Dépenses par mois -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Dépenses par mois</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dépenses par catégorie -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Répartition par catégorie</h5>
+            </div>
+            <div class="card-body">
+                <div style="width: 100%; height: 350px; max-width: 500px; margin: 0 auto;">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau des données -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Détails des dépenses</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Mois/Année</th>
+                                <th>Montant total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month, amount in monthly_data.items()|sort(reverse=true) %}
+                            <tr>
+                                <td>{{ month }}</td>
+                                <td>{{ "%.3f"|format(amount) }} dt</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    const monthlyData = {
+        labels: [{% for month, amount in monthly_data.items()|sort %}"{{ month }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Dépenses par mois',
+            data: [{% for month, amount in monthly_data.items()|sort %}{{ amount }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: '#2563eb',
+            borderColor: '#2563eb',
+            borderWidth: 1
+        }]
+    };
+    
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: monthlyData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    color: '#2563eb',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(1) + ' DT';
+                    },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 5
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Graphique des dépenses par catégorie
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    const categoryData = {
+        labels: [{% for category, amount in category_data.items() %}"{{ category }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for category, amount in category_data.items() %}{{ amount }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [
+                '#2563eb', '#64748b', '#3b83f6', '#d97706', '#dc2626',
+                '#7c3aed', '#0891b2', '#be123c', '#c2410c', '#365314'
+            ],
+            borderColor: '#ffffff',
+            borderWidth: 2
+        }]
+    };
+    
+    new Chart(categoryCtx, {
+        type: 'pie',
+        data: categoryData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return percentage + '%';
+                    },
+                    anchor: 'center',
+                    align: 'center'
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

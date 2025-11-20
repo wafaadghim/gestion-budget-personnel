@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter une dépense - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Ajouter une dépense à {{ group.name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="amount" class="form-label">Montant *</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" class="form-control" id="amount" name="amount"
+                                       placeholder="0.00" min="0" required>
+                                <span class="input-group-text">DT</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="category" class="form-label">Catégorie *</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Choisir une catégorie</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat }}">{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description *</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Décrivez cette dépense..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date *</label>
+                        <input type="date" class="form-control" id="date" name="date"
+                               value="{{ today.strftime('%Y-%m-%d') }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="justificatif" class="form-label">Justificatif (optionnel)</label>
+                        <input type="file" class="form-control" id="justificatif" name="justificatif" 
+                               accept=".png,.jpg,.jpeg,.gif,.pdf">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Formats acceptés: Images (PNG, JPG, JPEG, GIF) et PDF. Taille maximale: 5MB.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Info:</strong> Cette dépense sera visible par tous les membres du groupe.
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Ajouter la dépense
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Récapitulatif du groupe -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Récapitulatif du groupe</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="stats-icon mx-auto mb-2" style="background: var(--primary-gradient); width: 50px; height: 50px;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="fw-bold">{{ group.members|length }}</div>
+                        <small class="text-muted">Membres</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-icon mx-auto mb-2" style="background: var(--success-gradient); width: 50px; height: 50px;">
+                            <i class="fas fa-euro-sign"></i>
+                        </div>
+                        <div class="fw-bold">
+                            {% set total = 0 %}
+                            {% for expense in group.expenses %}
+                                {% set total = total + expense.amount %}
+                            {% endfor %}
+                            {{ "%.0f"|format(total) }}
+                        </div>
+                        <small class="text-muted">DT dépensés</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-icon mx-auto mb-2" style="background: var(--secondary-gradient); width: 50px; height: 50px;">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <div class="fw-bold">
+                            {% set avg = total / group.members|length if group.members|length > 0 else 0 %}
+                            {{ "%.0f"|format(avg) }}
+                        </div>
+                        <small class="text-muted">DT par personne</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calcul automatique de la part par personne
+document.getElementById('amount').addEventListener('input', function() {
+    const amount = parseFloat(this.value) || 0;
+    const memberCount = {{ group.members|length }};
+    const share = memberCount > 0 ? amount / memberCount : 0;
+
+    // Mettre à jour l'affichage si nécessaire
+    console.log(`Montant: ${amount} DT, Part par personne: ${share.toFixed(3)} DT`);
+});
+</script>
+{% endblock %}

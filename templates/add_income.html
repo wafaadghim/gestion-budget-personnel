@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter un Revenu{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Ajouter un nouveau revenu</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Montant *</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                            <span class="input-group-text">dt</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Catégorie *</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">Choisir une catégorie</option>
+                            {% for cat in income_categories %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Détails sur ce revenu..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date *</label>
+                        <input type="date" class="form-control" id="date" name="date" 
+                               value="{{ today.strftime('%Y-%m-%d') }}" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('incomes') }}" class="btn btn-secondary me-md-2">Annuler</a>
+                        <button type="submit" class="btn btn-success">Ajouter le revenu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+body {
+    background-color: #f0fdf4;
+}
+
+.jumbotron {
+    margin-top: 2rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f0fdf4;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.table th {
+    border-top: none;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}

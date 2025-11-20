@@ -1,0 +1,864 @@
+{% extends "base.html" %}
+
+{% block title %}Rapports Avancés - BudgetMaster{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <h1 class="h2"><i class="fas fa-chart-line me-2"></i>Rapports Avancés</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-primary" onclick="exportReport()">
+                <i class="fas fa-download me-1"></i>Exporter
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="refreshCharts()">
+                <i class="fas fa-sync-alt me-1"></i>Actualiser
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtres</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="dateFrom" class="form-label">Date de début</label>
+                        <input type="date" class="form-control" id="dateFrom" name="date_from">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="dateTo" class="form-label">Date de fin</label>
+                        <input type="date" class="form-control" id="dateTo" name="date_to">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="category" class="form-label">Catégorie</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">Toutes les catégories</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="group" class="form-label">Groupe</label>
+                        <select class="form-select" id="group" name="group">
+                            <option value="">Tous les groupes</option>
+                            {% for group in user_groups %}
+                                <option value="{{ group.group.id }}">{{ group.group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Appliquer les filtres
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetFilters()">
+                            <i class="fas fa-undo me-1"></i>Réinitialiser
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Métriques principales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-euro-sign fa-2x text-success"></i>
+                </div>
+                <h3 class="card-title text-success">{{ "%.3f"|format(total_income) }} DT</h3>
+                <p class="card-text text-muted">Revenus totaux</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up me-1"></i>+{{ "%.1f"|format(income_growth) }}%
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-shopping-cart fa-2x text-danger"></i>
+                </div>
+                <h3 class="card-title text-danger">{{ "%.3f"|format(total_expenses) }} DT</h3>
+                <p class="card-text text-muted">Dépenses totales</p>
+                <small class="text-danger">
+                    <i class="fas fa-arrow-down me-1"></i>{{ "%.1f"|format(expense_growth) }}%
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-balance-scale fa-2x text-info"></i>
+                </div>
+                <h3 class="card-title text-info">{{ "%.3f"|format(balance) }} DT</h3>
+                <p class="card-text text-muted">Solde actuel</p>
+                <small class="text-{{ 'success' if balance >= 0 else 'danger' }}">
+                    <i class="fas fa-{{ 'plus' if balance >= 0 else 'minus' }} me-1"></i>
+                    {{ "%.1f"|format(balance_percentage) }}%
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-chart-pie fa-2x text-warning"></i>
+                </div>
+                <h3 class="card-title text-warning">{{ "%.1f"|format(savings_rate) }}%</h3>
+                <p class="card-text text-muted">Taux d'épargne</p>
+                <small class="text-{{ 'success' if savings_rate >= 20 else 'warning' }}">
+                    <i class="fas fa-target me-1"></i>
+                    {{ 'Excellent' if savings_rate >= 20 else 'À améliorer' }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Évolution des finances</h5>
+            </div>
+            <div class="card-body">
+                <div style="width: 100%; height: 350px;">
+                    <canvas id="financeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Répartition des dépenses</h5>
+            </div>
+            <div class="card-body d-flex justify-content-center">
+                <div style="width: 100%; height: 300px; max-width: 300px;">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analyse par catégories -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Analyse par catégories</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Catégorie</th>
+                                <th>Dépenses</th>
+                                <th>Pourcentage</th>
+                                <th>Évolution</th>
+                                <th>Moyenne/mois</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in category_analysis %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="category-icon me-2" style="background: {{ category.color }};">
+                                            <i class="fas fa-{{ category.icon }}"></i>
+                                        </div>
+                                        {{ category.name }}
+                                    </div>
+                                </td>
+                                <td class="fw-bold">{{ "%.3f"|format(category.total) }} DT</td>
+                                <td>
+                                    <div class="progress" style="width: 100px;">
+                                        <div class="progress-bar" role="progressbar"
+                                             style="width: {{ category.percentage }}%; background: {{ category.color }};">
+                                            {{ "%.1f"|format(category.percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if category.trend > 0 else 'danger' }}">
+                                        <i class="fas fa-arrow-{{ 'up' if category.trend > 0 else 'down' }} me-1"></i>
+                                        {{ "%.1f"|format(category.trend) }}%
+                                    </span>
+                                </td>
+                                <td>{{ "%.3f"|format(category.monthly_avg) }} DT</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tendances et prédictions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Tendances mensuelles</h5>
+            </div>
+            <div class="card-body">
+                <div style="width: 100%; height: 350px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommandations intelligentes -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommandations personnalisées</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for recommendation in recommendations %}
+                    <div class="col-md-6 mb-3">
+                        <div class="recommendation-item p-3 border rounded h-100">
+                            <div class="d-flex align-items-start">
+                                <div class="recommendation-icon me-3">
+                                    <i class="fas fa-{{ recommendation.icon }} fa-lg text-{{ recommendation.type }}"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ recommendation.title }}</h6>
+                                    <p class="mb-1 text-muted small">{{ recommendation.description }}</p>
+                                    <small class="text-{{ recommendation.type }}">
+                                        <i class="fas fa-chart-line me-1"></i>
+                                        Impact potentiel: {{ recommendation.impact }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparaisons et objectifs -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Comparaison Revenus/Dépenses</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ "%.3f"|format(total_income) }} dt</h4>
+                        <small class="text-muted">Total Revenus</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-danger">{{ "%.3f"|format(total_expenses) }} dt</h4>
+                        <small class="text-muted">Total Dépenses</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    {% if total_income > total_expenses %}
+                        <span class="badge bg-success fs-6">Économie: {{ "%.3f"|format(total_income - total_expenses) }} dt</span>
+                    {% elif total_expenses > total_income %}
+                        <span class="badge bg-danger fs-6">Déficit: {{ "%.3f"|format(total_expenses - total_income) }} dt</span>
+                    {% else %}
+                        <span class="badge bg-warning fs-6">Équilibre</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Statistiques par période</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center mb-3">
+                            <h5 class="text-primary">{{ income_count }}</h5>
+                            <small class="text-muted">Revenus enregistrés</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center mb-3">
+                            <h5 class="text-warning">{{ expense_count }}</h5>
+                            <small class="text-muted">Dépenses enregistrées</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h6 class="text-info">{{ "%.1f"|format(avg_income) }} dt</h6>
+                            <small class="text-muted">Revenu moyen</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h6 class="text-secondary">{{ "%.1f"|format(avg_expense) }} dt</h6>
+                            <small class="text-muted">Dépense moyenne</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparaison avec le mois précédent -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Évolution par rapport au mois dernier</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="comparison-item mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Revenus</span>
+                                <span class="badge bg-{{ 'success' if income_comparison >= 0 else 'danger' }}">
+                                    {{ "%.1f"|format(income_comparison) }}%
+                                </span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" style="width: {{ (income_comparison + 100) / 2 }}%"></div>
+                            </div>
+                        </div>
+                        <div class="comparison-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Dépenses</span>
+                                <span class="badge bg-{{ 'success' if expense_comparison <= 0 else 'danger' }}">
+                                    {{ "%.1f"|format(expense_comparison) }}%
+                                </span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-danger" style="width: {{ (expense_comparison + 100) / 2 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Objectifs d'épargne</h6>
+                        <div class="savings-goals">
+                            {% for goal in savings_goals %}
+                            <div class="goal-item mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>{{ goal.name }}</span>
+                                    <span class="text-muted">{{ "%.0f"|format(goal.progress) }}%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ goal.progress }}%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ "%.3f"|format(goal.current) }} DT / {{ "%.3f"|format(goal.target) }} DT
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour les détails de catégorie -->
+<div class="modal fade" id="categoryDetailModal" tabindex="-1" aria-labelledby="categoryDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryDetailTitle">Détails de la catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="category-icon mb-3 mx-auto" style="width: 60px; height: 60px; background: #007bff;">
+                                    <i class="fas fa-chart-pie fa-2x text-white"></i>
+                                </div>
+                                <h4 class="card-title text-primary" id="categoryTotal">0.000 DT</h4>
+                                <p class="card-text text-muted">Dépenses totales</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="category-icon mb-3 mx-auto" style="width: 60px; height: 60px; background: #28a745;">
+                                    <i class="fas fa-percentage fa-2x text-white"></i>
+                                </div>
+                                <h4 class="card-title text-success" id="categoryPercentage">0.0%</h4>
+                                <p class="card-text text-muted">Pourcentage du total</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Évolution</h6>
+                                <span class="badge fs-6" id="categoryTrendBadge">
+                                    <i class="fas fa-arrow-up me-1"></i>0.0%
+                                </span>
+                                <p class="card-text text-muted small mt-2">Par rapport au mois dernier</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Moyenne mensuelle</h6>
+                                <h5 class="text-info" id="categoryMonthlyAvg">0.000 DT</h5>
+                                <p class="card-text text-muted small">Sur les 6 derniers mois</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Conseils pour cette catégorie</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="categoryAdvice">
+                                    <p class="mb-0">Conseils personnalisés basés sur vos habitudes de dépenses dans cette catégorie.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" onclick="viewCategoryExpenses()">Voir les dépenses</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+// Stocker les données des catégories globalement
+const categoryAnalysisData = {{ category_analysis|tojson }};
+
+let financeChart, expenseChart, trendChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // Graphique d'évolution des finances
+    const financeCtx = document.getElementById('financeChart').getContext('2d');
+    financeChart = new Chart(financeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ monthly_labels|tojson }},
+            datasets: [{
+                label: 'Revenus',
+                data: {{ monthly_income|tojson }},
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#10B981',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }, {
+                label: 'Dépenses',
+                data: {{ monthly_expenses|tojson }},
+                borderColor: '#EF4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#EF4444',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                datalabels: {
+                    display: function(context) {
+                        return context.datasetIndex === 0; // Afficher seulement pour le premier dataset (Revenus)
+                    },
+                    color: '#10B981',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(1) + ' DT';
+                    },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 5
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        font: {
+                            size: 14,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    cornerRadius: 10,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(3)} DT`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' DT';
+                        },
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        }
+                    }
+                }
+            },
+            animation: {
+                duration: 1500,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+
+    // Graphique de répartition des dépenses
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    expenseChart = new Chart(expenseCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ category_labels|tojson }},
+            datasets: [{
+                data: {{ category_data|tojson }},
+                backgroundColor: [
+                    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+                    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                    '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 3,
+                hoverBorderWidth: 4,
+                hoverBorderColor: '#333333'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                datalabels: {
+                    color: '#ffffff',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return percentage + '%';
+                    },
+                    anchor: 'center',
+                    align: 'center'
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        usePointStyle: true,
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        },
+                        boxWidth: 12,
+                        boxHeight: 12
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    cornerRadius: 10,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value.toFixed(3)} DT (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true,
+                duration: 1200,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+
+    // Graphique des tendances
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    trendChart = new Chart(trendCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ trend_labels|tojson }},
+            datasets: [{
+                label: 'Évolution des dépenses',
+                data: {{ trend_data|tojson }},
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(59, 130, 246, 0.8)',
+                    'rgba(168, 85, 247, 0.8)', 'rgba(236, 72, 153, 0.8)', 'rgba(245, 158, 11, 0.8)'
+                ],
+                borderColor: [
+                    '#EF4444', '#22C55E', '#3B82F6', '#A855F7', '#EC4899', '#F59E0B'
+                ],
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+                hoverBackgroundColor: [
+                    'rgba(239, 68, 68, 1)', 'rgba(34, 197, 94, 1)', 'rgba(59, 130, 246, 1)',
+                    'rgba(168, 85, 247, 1)', 'rgba(236, 72, 153, 1)', 'rgba(245, 158, 11, 1)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    color: '#333333',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(1) + ' DT';
+                    },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 5
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    cornerRadius: 10,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `Dépenses: ${context.parsed.y.toFixed(3)} DT`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' DT';
+                        },
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        }
+                    }
+                }
+            },
+            animation: {
+                duration: 1500,
+                easing: 'easeInOutQuart',
+                delay: function(context) {
+                    return context.dataIndex * 200;
+                }
+            }
+        }
+    });
+}
+
+function refreshCharts() {
+    // Recharger les données et mettre à jour les graphiques
+    location.reload();
+}
+
+function exportReport() {
+    // Fonctionnalité d'export à implémenter
+    alert('Fonctionnalité d\'export à implémenter');
+}
+
+function viewCategoryDetails(category) {
+    // Trouver les données de la catégorie
+    const categoryInfo = categoryAnalysisData.find(cat => cat.name === category);
+
+    if (categoryInfo) {
+        // Remplir la modal avec les données
+        document.getElementById('categoryDetailTitle').textContent = `Détails de la catégorie: ${category}`;
+        document.getElementById('categoryTotal').textContent = `${categoryInfo.total.toFixed(3)} DT`;
+        document.getElementById('categoryPercentage').textContent = `${categoryInfo.percentage.toFixed(1)}%`;
+        document.getElementById('categoryTrend').textContent = `${categoryInfo.trend.toFixed(1)}%`;
+        document.getElementById('categoryMonthlyAvg').textContent = `${categoryInfo.monthly_avg.toFixed(3)} DT`;
+
+        // Changer la couleur du badge selon la tendance
+        const trendBadge = document.getElementById('categoryTrendBadge');
+        trendBadge.className = `badge bg-${categoryInfo.trend > 0 ? 'danger' : 'success'}`;
+        trendBadge.innerHTML = `<i class="fas fa-arrow-${categoryInfo.trend > 0 ? 'up' : 'down'} me-1"></i>${Math.abs(categoryInfo.trend).toFixed(1)}%`;
+
+        // Afficher la modal
+        const modal = new bootstrap.Modal(document.getElementById('categoryDetailModal'));
+        modal.show();
+    }
+}
+
+function viewCategoryExpenses() {
+    // Rediriger vers la page des dépenses avec un filtre sur la catégorie
+    const category = document.getElementById('categoryDetailTitle').textContent.replace('Détails de la catégorie: ', '');
+    window.location.href = `/expenses?category=${encodeURIComponent(category)}`;
+}
+
+// Gestionnaire pour les filtres
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams(formData);
+
+    // Recharger la page avec les filtres
+    window.location.search = params.toString();
+});
+
+// Styles supplémentaires
+document.head.insertAdjacentHTML('beforeend', `
+    <style>
+        .category-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .recommendation-item {
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-item:hover {
+            background-color: rgba(0,123,255,0.05);
+            transform: translateX(5px);
+        }
+
+        .recommendation-icon {
+            opacity: 0.8;
+        }
+
+        .stat-icon {
+            opacity: 0.7;
+        }
+
+        .comparison-item, .goal-item {
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(0,0,0,0.02);
+        }
+    </style>
+`);
+</script>
+{% endblock %}

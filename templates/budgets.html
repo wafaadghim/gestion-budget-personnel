@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Budgets - Gestion des Dépenses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Gestion des Budgets</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Définir un budget</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_budget') }}">
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Catégorie</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">Choisir une catégorie</option>
+                            {% for category in categories %}
+                                <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Budget mensuel (dt)</label>
+                        <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Enregistrer le budget</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Budgets du mois</h5>
+            </div>
+            <div class="card-body">
+                {% if budgets %}
+                    {% for budget in budgets %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ budget.category }}</strong>
+                            <span>{{ "%.3f"|format(budget.amount) }} dt</span>
+                        </div>
+                        {% set spent = expenses_by_category.get(budget.category, 0) %}
+                        {% set percentage = (spent / budget.amount * 100) if budget.amount > 0 else 0 %}
+                        
+                        <div class="progress budget-progress mt-1">
+                            <div class="progress-bar {% if percentage > 100 %}budget-exceeded{% elif percentage > 80 %}budget-warning{% else %}budget-good{% endif %}" 
+                                 style="width: {{ min(percentage, 100) }}%">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Dépensé: {{ "%.3f"|format(spent) }} dt
+                            ({{ "%.1f"|format(percentage) }}%)
+                        </small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Aucun budget défini pour ce mois.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

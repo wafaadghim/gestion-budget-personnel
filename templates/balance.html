@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Balance et Statistiques{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Balance et Statistiques</h1>
+</div>
+
+<!-- Statistiques du mois -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Revenus du mois</h5>
+                <h3 class="card-text">{{ "%.3f"|format(total_income) }} DT</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">Dépenses du mois</h5>
+                <h3 class="card-text">{{ "%.3f"|format(total_expenses) }} DT</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card {% if balance >= 0 %}text-white bg-info{% else %}text-white bg-warning{% endif %}">
+            <div class="card-body">
+                <h5 class="card-title">Balance du mois</h5>
+                <h3 class="card-text">{{ "%.3f"|format(balance) }} DT</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Épargne potentielle</h5>
+                <h3 class="card-text">{{ "%.1f"|format((balance / total_income * 100) if total_income > 0 else 0) }}%</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques annuelles -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Statistiques Annuelles</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Revenus annuels:</strong> {{ "%.3f"|format(total_year_income) }} DT</p>
+                        <p><strong>Dépenses annuelles:</strong> {{ "%.3f"|format(total_year_expenses) }} DT</p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Balance annuelle:</strong> 
+                            <span class="{% if year_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.3f"|format(year_balance) }} DT
+                            </span>
+                        </p>
+                        <p><strong>Taux d'épargne:</strong> 
+                            {{ "%.1f"|format((year_balance / total_year_income * 100) if total_year_income > 0 else 0) }}%
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Répartition Revenus/Dépenses</h5>
+            </div>
+            <div class="card-body">
+                <div style="width: 100%; height: 350px; max-width: 500px; margin: 0 auto;">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Évolution mensuelle -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Évolution des 6 derniers mois</h5>
+            </div>
+            <div class="card-body">
+                <div style="width: 100%; height: 400px;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau récapitulatif -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Récapitulatif mensuel détaillé</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Mois</th>
+                                <th>Revenus</th>
+                                <th>Dépenses</th>
+                                <th>Balance</th>
+                                <th>Épargne (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in monthly_data %}
+                            <tr>
+                                <td>{{ data.month }}</td>
+                                <td class="text-success">{{ "%.3f"|format(data.income) }} DT</td>
+                                <td class="text-danger">{{ "%.3f"|format(data.expenses) }} DT</td>
+                                <td class="{% if data.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ "%.3f"|format(data.balance) }} DT
+                                </td>
+                                <td>
+                                    {{ "%.1f"|format((data.balance / data.income * 100) if data.income > 0 else 0) }}%
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Graphique répartition
+    const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+    new Chart(balanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Revenus', 'Dépenses'],
+            datasets: [{
+                data: [{{ total_income }}, {{ total_expenses }}],
+                backgroundColor: ['#28a745', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                datalabels: {
+                    color: '#ffffff',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return percentage + '%';
+                    },
+                    anchor: 'center',
+                    align: 'center'
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Graphique évolution mensuelle
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    const monthlyData = {{ monthly_data|tojson }};
+    
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.map(d => d.month),
+            datasets: [{
+                label: 'Revenus',
+                data: monthlyData.map(d => d.income),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.1
+            }, {
+                label: 'Dépenses',
+                data: monthlyData.map(d => d.expenses),
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.1
+            }, {
+                label: 'Balance',
+                data: monthlyData.map(d => d.balance),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    display: function(context) {
+                        // Afficher seulement les labels pour le dernier point de chaque dataset
+                        return context.dataIndex === context.dataset.data.length - 1;
+                    },
+                    color: function(context) {
+                        // Couleur selon le dataset
+                        const colors = ['#28a745', '#dc3545', '#007bff'];
+                        return colors[context.datasetIndex];
+                    },
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(1) + ' DT';
+                    },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 5
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

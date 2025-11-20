@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - Cagnotte</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-light: #dbeafe;
+            --primary-dark: #1d4ed8;
+            --secondary-color: #1e40af;
+            --accent-color: #3b83f6;
+            --success-color: #059669;
+            --warning-color: #ca8a04;
+            --error-color: #dc2626;
+            --background-color: #f8fafc;
+            --surface-color: #ffffff;
+            --surface-hover: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-heavy: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 0 1rem;
+        }
+
+        .register-card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-medium);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .register-card:hover {
+            box-shadow: var(--shadow-heavy);
+            transform: translateY(-2px);
+        }
+
+        .register-header {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 2.5rem 2rem 2rem;
+            text-align: center;
+        }
+
+        .brand-logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .brand-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .register-body {
+            padding: 2.5rem 2rem 2rem;
+        }
+
+        .form-floating {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-floating > label {
+            padding: 1rem 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1rem 0.75rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+            outline: none;
+        }
+
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .password-strength.weak { color: var(--error-color); }
+        .password-strength.medium { color: var(--warning-color); }
+        .password-strength.strong { color: var(--accent-color); }
+
+        .terms-checkbox {
+            margin-bottom: 1.5rem;
+        }
+
+        .terms-checkbox .form-check-input {
+            width: 1.2em;
+            height: 1.2em;
+            margin-top: 0.25em;
+            border-radius: 4px;
+            border-color: var(--border-color);
+        }
+
+        .terms-checkbox .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .terms-checkbox .form-check-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .terms-checkbox .form-check-label a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .terms-checkbox .form-check-label a:hover {
+            text-decoration: underline;
+        }
+
+        .btn-register {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: var(--transition);
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-register:hover {
+            background-color: var(--success-color);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+
+        .divider span {
+            padding: 0 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .social-register {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-social {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            color: var(--text-secondary);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            transition: var(--transition);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+
+        .btn-social:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background-color: var(--primary-light);
+            transform: translateY(-1px);
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .login-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .login-link a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .alert {
+            border-radius: var(--border-radius);
+            border: none;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-success {
+            background-color: #dcfce7;
+            color: #166534;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .alert-danger {
+            background-color: #fef3f2;
+            color: #991b1b;
+            border-left: 4px solid var(--error-color);
+        }
+
+        @media (max-width: 768px) {
+            .register-container {
+                padding: 0 1rem;
+                max-width: 100%;
+            }
+
+            .register-header {
+                padding: 2rem 1.5rem 1.5rem;
+            }
+
+            .register-body {
+                padding: 2rem 1.5rem 1.5rem;
+            }
+
+            .brand-logo {
+                font-size: 2.5rem;
+            }
+
+            .brand-title {
+                font-size: 1.5rem;
+            }
+
+            .social-register {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-card">
+            <div class="register-header">
+                <div class="brand-logo">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <div class="brand-title">Rejoignez Cagnotte</div>
+               
+            </div>
+
+            <div class="register-body">
+                <!-- Benefits Section -->
+                
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" id="registerForm">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Nom d'utilisateur" required autocomplete="username" minlength="3" maxlength="50">
+                        <label for="username">
+                            <i class="fas fa-user me-2"></i>Nom d'utilisateur
+                        </label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="first_name" name="first_name" placeholder="Prénom" required autocomplete="given-name" minlength="2" maxlength="50">
+                        <label for="first_name">
+                            <i class="fas fa-user-tag me-2"></i>Prénom
+                        </label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="Adresse email" required autocomplete="email">
+                        <label for="email">
+                            <i class="fas fa-envelope me-2"></i>Adresse email
+                        </label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe" required autocomplete="new-password" minlength="6">
+                        <label for="password">
+                            <i class="fas fa-lock me-2"></i>Mot de passe
+                        </label>
+                        <div id="passwordStrength" class="password-strength"></div>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="Confirmer le mot de passe" required autocomplete="new-password">
+                        <label for="confirmPassword">
+                            <i class="fas fa-lock me-2"></i>Confirmer le mot de passe
+                        </label>
+                    </div>
+
+                    <div class="terms-checkbox">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="acceptTerms" required>
+                            <label class="form-check-label" for="acceptTerms">
+                                J'accepte les <a href="#" target="_blank">Conditions d'utilisation</a> et la <a href="#" target="_blank">Politique de confidentialité</a>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-register" id="registerBtn">
+                        <i class="fas fa-user-plus me-2"></i>Créer mon compte gratuit
+                    </button>
+                </form>
+
+                <div class="divider">
+                    <span>ou continuer avec</span>
+                </div>
+
+                <div class="social-register">
+                    <a href="#" class="btn-social">
+                        <i class="fab fa-google me-2"></i>Google
+                    </a>
+                    <a href="#" class="btn-social">
+                        <i class="fab fa-facebook me-2"></i>Facebook
+                    </a>
+                </div>
+
+                <div class="login-link">
+                    <p class="mb-2">Déjà un compte ?</p>
+                    <a href="{{ url_for('login') }}">
+                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Animation des éléments au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            const card = document.querySelector('.register-card');
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.4s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        });
+
+        // Vérification de la force du mot de passe
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            const strengthIndicator = document.getElementById('passwordStrength');
+            const confirmPassword = document.getElementById('confirmPassword');
+
+            let strength = 0;
+
+            if (password.length >= 6) strength++;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+            if (password.match(/\d/)) strength++;
+            if (password.match(/[^a-zA-Z\d]/)) strength++;
+
+            switch(strength) {
+                case 0:
+                case 1:
+                    strengthIndicator.textContent = '';
+                    strengthIndicator.className = 'password-strength';
+                    break;
+                case 2:
+                    strengthIndicator.textContent = 'Mot de passe faible';
+                    strengthIndicator.className = 'password-strength weak';
+                    break;
+                case 3:
+                    strengthIndicator.textContent = 'Mot de passe moyen';
+                    strengthIndicator.className = 'password-strength medium';
+                    break;
+                case 4:
+                    strengthIndicator.textContent = 'Mot de passe fort';
+                    strengthIndicator.className = 'password-strength strong';
+                    break;
+            }
+
+            // Vérifier la confirmation
+            if (confirmPassword.value && password !== confirmPassword.value) {
+                confirmPassword.setCustomValidity("Les mots de passe ne correspondent pas");
+            } else {
+                confirmPassword.setCustomValidity("");
+            }
+        });
+
+        // Vérification de la confirmation du mot de passe
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+
+            if (password !== confirmPassword) {
+                this.setCustomValidity("Les mots de passe ne correspondent pas");
+            } else {
+                this.setCustomValidity("");
+            }
+        });
+
+        // Effet de focus sur les inputs
+        const inputs = document.querySelectorAll('.form-control');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'translateY(-1px)';
+                this.parentElement.style.boxShadow = 'var(--shadow-light)';
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'translateY(0)';
+                this.parentElement.style.boxShadow = 'none';
+            });
+        });
+
+        // Animation du bouton lors de la soumission
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('registerBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Création en cours...';
+            btn.disabled = true;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Invitations reçues</h4>
+            </div>
+            <div class="card-body">
+                {% if invitations %}
+                    {% for invitation in invitations %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ invitation.group.name }}</h5>
+                            <p class="card-text">
+                                <strong>Invitation de:</strong> {{ invitation.sender.username }}<br>
+                                {% if invitation.group.location %}
+                                <strong>Lieu:</strong> {{ invitation.group.location }}<br>
+                                {% endif %}
+                                {% if invitation.group.date_sortie %}
+                                <strong>Date:</strong> {{ invitation.group.date_sortie.strftime('%d/%m/%Y') }} à {{ invitation.group.heure_sortie.strftime('%H:%M') }}
+                                {% endif %}
+                            </p>
+                            
+                            {% if invitation.status == 'pending' %}
+                            <form method="POST" action="{{ url_for('handle_invitation', invitation_id=invitation.id) }}" class="d-inline">
+                                <button type="submit" name="action" value="accept" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Accepter
+                                </button>
+                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-times"></i> Refuser
+                                </button>
+                            </form>
+                            {% elif invitation.status == 'waiting_approval' %}
+                            <span class="badge bg-warning">En attente d'approbation</span>
+                            {% elif invitation.status == 'accepted' %}
+                            <span class="badge bg-success">Acceptée</span>
+                            {% else %}
+                            <span class="badge bg-danger">Refusée</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Aucune invitation reçue.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Invitations envoyées</h4>
+            </div>
+            <div class="card-body">
+                {% if sent_invitations %}
+                    {% for invitation in sent_invitations %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ invitation.group.name }}</h5>
+                            <p class="card-text">
+                                <strong>À:</strong> {{ invitation.invited_user.username }}<br>
+                                <strong>Statut:</strong> 
+                                {% if invitation.status == 'pending' %}
+                                <span class="badge bg-warning">En attente</span>
+                                {% elif invitation.status == 'accepted' %}
+                                <span class="badge bg-success">Acceptée</span>
+                                {% elif invitation.status == 'waiting_approval' %}
+                                <span class="badge bg-info">En attente d'approbation</span>
+                                {% else %}
+                                <span class="badge bg-danger">Refusée</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Aucune invitation envoyée.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

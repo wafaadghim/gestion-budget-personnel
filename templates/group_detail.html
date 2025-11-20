@@ -1,0 +1,723 @@
+{% extends "base.html" %}
+
+{% block title %}{{ group.name }} - BudgetMaster{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <div>
+        <h1 class="h2"><i class="fas fa-users me-2"></i>{{ group.name }}</h1>
+        {% if group.description %}
+        <p class="text-muted mb-0">{{ group.description }}</p>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        {% if is_creator and not group.is_expired() %}
+        <a href="{{ url_for('edit_group', group_id=group.id) }}" class="btn btn-outline-warning">
+            <i class="fas fa-edit me-1"></i>Modifier
+        </a>
+        <button class="btn btn-outline-danger" onclick="deleteGroup()">
+            <i class="fas fa-trash me-1"></i>Supprimer
+        </button>
+        {% endif %}
+        {% if (is_creator or is_admin) and not group.is_expired() %}
+        <button class="btn btn-outline-primary" onclick="inviteMember()">
+            <i class="fas fa-user-plus me-1"></i>Inviter
+        </button>
+        {% endif %}
+        {% if not group.is_expired() %}
+        <a href="{{ url_for('add_group_expense', group_id=group.id) }}" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Dépense
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Informations du groupe -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <strong><i class="fas fa-crown me-2 text-warning"></i>Créateur:</strong>
+                            {{ group.creator.username }}
+                        </div>
+                        <div class="mb-3">
+                            <strong><i class="fas fa-users me-2 text-primary"></i>Membres:</strong>
+                            {{ member_count }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {% if group.location %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-map-marker-alt me-2 text-danger"></i>Lieu:</strong>
+                            {{ group.location }}
+                        </div>
+                        {% endif %}
+                        {% if group.date_sortie %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-calendar me-2 text-success"></i>Date:</strong>
+                            {{ group.date_sortie.strftime('%d/%m/%Y') }}
+                            {% if group.heure_sortie %}
+                            à {{ group.heure_sortie.strftime('%H:%M') }}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if group.is_expired() %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Cette sortie est passée.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="stats-card text-center">
+            <div class="stats-icon" style="background: var(--secondary-gradient);">
+                <i class="fas fa-euro-sign"></i>
+            </div>
+            <div class="stats-value text-danger">{{ "%.3f"|format(total_expenses) }}</div>
+            <div class="text-muted">DT dépensés</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Membres -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Membres ({{ member_count }})</h5>
+                {% if (is_creator or is_admin) and not group.is_expired() %}
+                <button class="btn btn-sm btn-outline-primary" onclick="inviteMember()">
+                    <i class="fas fa-plus"></i>
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% for member in members %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-3" style="background: var(--primary-gradient);">
+                            {{ member.user.username[0].upper() }}
+                        </div>
+                        <div>
+                            <div class="fw-bold">{{ member.user.username }}</div>
+                            {% if member.is_admin %}
+                            <small class="text-warning"><i class="fas fa-crown me-1"></i>Admin</small>
+                            {% elif member.user_id == group.created_by %}
+                            <small class="text-warning"><i class="fas fa-crown me-1"></i>Créateur</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if (is_creator or is_admin) and member.user_id != current_user.id %}
+                    <button class="btn btn-sm btn-outline-danger"
+                            onclick="removeMember({{ member.user_id }}, '{{ member.user.username }}')">
+                        <i class="fas fa-user-minus"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Dépenses du groupe -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Dépenses du groupe</h5>
+                {% if not group.is_expired() %}
+                <a href="{{ url_for('add_group_expense', group_id=group.id) }}" class="btn btn-sm btn-success">
+                    <i class="fas fa-plus me-1"></i>Ajouter
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if expenses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Catégorie</th>
+                                    <th>Membre</th>
+                                    <th class="text-end">Montant</th>
+                                    <th>Justificatif</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense.date.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ expense.description }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ expense.category }}</span>
+                                    </td>
+                                    <td>{{ expense.user.username }}</td>
+                                    <td class="text-end fw-bold text-danger">{{ "%.3f"|format(expense.amount) }} DT</td>
+                                    <td>
+                                        {% if expense.justificatif %}
+                                        <a href="{{ url_for('static', filename='uploads/justificatifs/' + expense.justificatif) }}" 
+                                           target="_blank" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-file-alt me-1"></i>Voir
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if expense.user_id == current_user.id and not group.is_expired() %}
+                                        <a href="{{ url_for('edit_group_expense', group_id=group.id, expense_id=expense.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-dark">
+                                    <th colspan="4" class="text-end">Total:</th>
+                                    <th class="text-end">{{ "%.3f"|format(total_expenses) }} DT</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Aucune dépense dans ce groupe</p>
+                        {% if not group.is_expired() %}
+                        <a href="{{ url_for('add_group_expense', group_id=group.id) }}" class="btn btn-primary">
+                            Ajouter la première dépense
+                        </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour inviter un membre -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header custom-modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Inviter un membre
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body custom-modal-body">
+                <!-- Onglets pour les méthodes d'invitation -->
+                <ul class="nav nav-tabs custom-nav-tabs" id="inviteTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active custom-nav-link" id="username-tab" data-bs-toggle="tab" data-bs-target="#username-invite" type="button" role="tab">
+                            <i class="fas fa-user me-1"></i>Par nom d'utilisateur
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link custom-nav-link" id="link-tab" data-bs-toggle="tab" data-bs-target="#link-invite" type="button" role="tab">
+                            <i class="fas fa-link me-1"></i>Lien d'invitation
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content mt-4" id="inviteTabsContent">
+                    <!-- Invitation par nom d'utilisateur -->
+                    <div class="tab-pane fade show active" id="username-invite" role="tabpanel">
+                        <form method="POST" action="{{ url_for('invite_member', group_id=group.id) }}">
+                            <div class="mb-4">
+                                <label for="username" class="form-label fw-bold">
+                                    <i class="fas fa-user me-2"></i>Nom d'utilisateur
+                                </label>
+                                <input type="text" class="form-control custom-form-control" id="username" name="username"
+                                       placeholder="Entrez le nom d'utilisateur" required>
+                                <div class="form-text text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>L'utilisateur recevra une notification d'invitation.
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary custom-submit-btn">
+                                <i class="fas fa-paper-plane me-1"></i>Envoyer l'invitation
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Invitation par lien -->
+                    <div class="tab-pane fade" id="link-invite" role="tabpanel">
+                        <div class="alert alert-info custom-alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Info:</strong> Partagez ce lien d'invitation permanent via WhatsApp, Messenger, Telegram, Email ou SMS.
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-link me-2"></i>Lien d'invitation permanent
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control custom-form-control" id="inviteLink" readonly
+                                       value="{% if group.invite_token %}{{ url_for('join_group_by_token', token=group.invite_token, _external=True) }}{% else %}Aucun lien disponible{% endif %}"
+                                       style='background-color: {% if group.invite_token %}white{% else %}#f8f9fa{% endif %};'>
+                                {% if not group.invite_token %}
+                                <button class="btn btn-primary" type="button" onclick="generateInviteLink()">
+                                    <i class="fas fa-magic me-1"></i>Générer
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Ce lien est permanent et peut être utilisé plusieurs fois.
+                            </div>
+                        </div>
+
+                        {% if group.invite_token %}
+                        <div class="mb-4" id="shareOptions">
+                        {% else %}
+                        <div class="mb-4" id="shareOptions" style="display: none;">
+                        {% endif %}
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-share-alt me-2"></i>Partager via
+                            </label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-outline-success custom-outline-btn" onclick="shareViaWhatsApp()">
+                                    <i class="fab fa-whatsapp me-1"></i>WhatsApp
+                                </button>
+                                <button class="btn btn-outline-primary custom-outline-btn" onclick="shareViaMessenger()">
+                                    <i class="fab fa-facebook-messenger me-1"></i>Messenger
+                                </button>
+                                <button class="btn btn-outline-info custom-outline-btn" onclick="shareViaTelegram()">
+                                    <i class="fab fa-telegram me-1"></i>Telegram
+                                </button>
+                                <button class="btn btn-outline-secondary custom-outline-btn" onclick="shareViaEmail()">
+                                    <i class="fas fa-envelope me-1"></i>Email
+                                </button>
+                                <button class="btn btn-outline-dark custom-outline-btn" onclick="shareViaSMS()">
+                                    <i class="fas fa-sms me-1"></i>SMS
+                                </button>
+                                <button class="btn btn-outline-warning custom-outline-btn" onclick="copyInviteLink()">
+                                    <i class="fas fa-copy me-1"></i>Copier
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning custom-alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Attention:</strong> Toute personne ayant ce lien pourra rejoindre le groupe.
+                            Partagez-le uniquement avec des personnes de confiance.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer custom-modal-footer">
+                <button type="button" class="btn btn-outline-secondary custom-outline-btn" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function inviteMember() {
+    const modal = new bootstrap.Modal(document.getElementById('inviteModal'));
+    modal.show();
+}
+
+function generateInviteLink() {
+    const generateBtn = event.target.closest('button');
+    const originalText = generateBtn.innerHTML;
+
+    // Afficher le chargement
+    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Génération...';
+    generateBtn.disabled = true;
+
+    // Générer un nouveau token pour le lien d'invitation
+    fetch(`{{ url_for('generate_invite_token', group_id=group.id) }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour le lien d'invitation avec le token réel
+            document.getElementById('inviteLink').value = data.invite_url;
+            document.getElementById('inviteLink').style.backgroundColor = 'white';
+
+            // Afficher les options de partage
+            document.getElementById('shareOptions').style.display = 'block';
+
+            // Animation de succès
+            generateBtn.innerHTML = '<i class="fas fa-check me-1"></i>Généré !';
+            generateBtn.classList.remove('btn-primary');
+            generateBtn.classList.add('btn-success');
+
+            showNotification('Lien d\'invitation généré avec succès !', 'success');
+
+            // Remettre le bouton normal après 2 secondes
+            setTimeout(() => {
+                generateBtn.innerHTML = originalText;
+                generateBtn.classList.remove('btn-success');
+                generateBtn.classList.add('btn-primary');
+                generateBtn.disabled = false;
+            }, 2000);
+
+        } else {
+            showNotification(data.message || 'Erreur lors de la génération du lien d\'invitation', 'error');
+            generateBtn.innerHTML = originalText;
+            generateBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la génération du lien d\'invitation', 'error');
+        generateBtn.innerHTML = originalText;
+        generateBtn.disabled = false;
+    });
+}
+
+function copyInviteLink() {
+    const linkInput = document.getElementById('inviteLink');
+    const linkValue = linkInput.value;
+
+    if (!linkValue || linkValue.includes('PLACEHOLDER')) {
+        showNotification('Veuillez d\'abord générer le lien d\'invitation', 'warning');
+        return;
+    }
+
+    // Essayer d'abord l'API moderne du presse-papiers
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(linkValue).then(function() {
+            showNotification('Lien copié dans le presse-papiers !', 'success');
+            // Animation du bouton
+            const copyBtn = event.target.closest('button');
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check me-1"></i>Copié !';
+            copyBtn.classList.add('btn-success');
+            copyBtn.classList.remove('btn-outline-secondary');
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('btn-outline-secondary');
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Erreur lors de la copie:', err);
+            fallbackCopyTextToClipboard(linkValue);
+        });
+    } else {
+        // Fallback pour les navigateurs plus anciens ou contextes non sécurisés
+        fallbackCopyTextToClipboard(linkValue);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showNotification('Lien copié dans le presse-papiers !', 'success');
+        } else {
+            showNotification('Erreur lors de la copie du lien', 'error');
+        }
+    } catch (err) {
+        console.error('Erreur lors de la copie:', err);
+        showNotification('Erreur lors de la copie du lien', 'error');
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function shareViaWhatsApp() {
+    const link = document.getElementById('inviteLink').value;
+    if (!link || link.includes('PLACEHOLDER')) {
+        showNotification('Veuillez d\'abord générer le lien d\'invitation', 'warning');
+        return;
+    }
+    const groupName = "{{ group.name }}";
+    const message = encodeURIComponent(`Salut ! Rejoins mon groupe "${groupName}" sur Cagnotte !\n\n${link}`);
+    const whatsappUrl = `https://wa.me/?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+function shareViaMessenger() {
+    const link = document.getElementById('inviteLink').value;
+    if (!link || link.includes('PLACEHOLDER')) {
+        showNotification('Veuillez d\'abord générer le lien d\'invitation', 'warning');
+        return;
+    }
+    // Utiliser l'API Messenger plus simple
+    const messengerUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(link)}&redirect_uri=${encodeURIComponent(window.location.href)}`;
+    window.open(messengerUrl, '_blank');
+}
+
+function shareViaEmail() {
+    const link = document.getElementById('inviteLink').value;
+    if (!link || link.includes('PLACEHOLDER')) {
+        showNotification('Veuillez d\'abord générer le lien d\'invitation', 'warning');
+        return;
+    }
+    const groupName = "{{ group.name }}";
+    const subject = encodeURIComponent(`Invitation à rejoindre le groupe "${groupName}"`);
+    const body = encodeURIComponent(`Salut !\n\nJe t'invite à rejoindre mon groupe "${groupName}" sur Cagnotte.\n\nClique sur ce lien pour accepter l'invitation :\n${link}\n\nÀ bientôt !`);
+    const emailUrl = `mailto:?subject=${subject}&body=${body}`;
+    window.location.href = emailUrl;
+}
+
+function shareViaSMS() {
+    const link = document.getElementById('inviteLink').value;
+    if (!link || link.includes('PLACEHOLDER')) {
+        showNotification('Veuillez d\'abord générer le lien d\'invitation', 'warning');
+        return;
+    }
+    const groupName = "{{ group.name }}";
+    const message = encodeURIComponent(`Salut ! Rejoins mon groupe "${groupName}" sur Cagnotte : ${link}`);
+    const smsUrl = `sms:?body=${message}`;
+    window.location.href = smsUrl;
+}
+
+function shareViaTelegram() {
+    const link = document.getElementById('inviteLink').value;
+    if (!link || link.includes('PLACEHOLDER')) {
+        showNotification('Veuillez d\'abord générer le lien d\'invitation', 'warning');
+        return;
+    }
+    const groupName = "{{ group.name }}";
+    const message = encodeURIComponent(`Salut ! Rejoins mon groupe "${groupName}" sur Cagnotte !\n\n${link}`);
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${message}`;
+    window.open(telegramUrl, '_blank');
+}
+
+function showNotification(message, type) {
+    // Créer une notification temporaire
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+    notification.innerHTML = `<i class="fas fa-check-circle me-2"></i>${message}`;
+    document.body.appendChild(notification);
+
+    // Supprimer la notification après 3 secondes
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function removeMember(userId, username) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer ${username} de ce groupe ?`)) {
+        window.location.href = `{{ url_for('remove_member', group_id=group.id, user_id=0) }}`.replace('user_id=0', `user_id=${userId}`);
+    }
+}
+
+function deleteGroup() {
+    const groupName = "{{ group.name }}";
+    const expenseCount = {{ expenses|length }};
+    
+    let message = `Êtes-vous sûr de vouloir supprimer le groupe "${groupName}" ?`;
+    
+    if (expenseCount > 0) {
+        message += `\n\nAttention : Ce groupe contient ${expenseCount} dépense(s). Toutes les données seront supprimées définitivement.`;
+    }
+    
+    message += `\n\nCette action est irréversible.`;
+    
+    if (confirm(message)) {
+        // Créer un formulaire POST pour la suppression
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url_for('delete_group', group_id=group.id) }}`;
+        
+        // Ajouter le token CSRF si nécessaire
+        const csrfToken = document.querySelector('input[name="csrf_token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Styles pour les avatars
+document.head.insertAdjacentHTML('beforeend', `
+    <style>
+        .avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* Styles personnalisés pour les modals */
+        .custom-modal {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .custom-modal-header {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 20px 20px 0 0;
+            padding: 20px 30px;
+        }
+
+        .custom-modal-body {
+            padding: 30px;
+            background: transparent;
+        }
+
+        .custom-modal-footer {
+            border: none;
+            padding: 20px 30px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 0 0 20px 20px;
+        }
+
+        .custom-form-control {
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .custom-form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+            background: white;
+        }
+
+        .custom-submit-btn {
+            background: var(--primary-gradient) !important;
+            border: none !important;
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 12px 24px;
+            transition: all 0.3s ease;
+        }
+
+        .custom-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+
+        .custom-outline-btn {
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .custom-outline-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .custom-alert {
+            background: linear-gradient(135deg, #e3f3fd 0%, #bbdefb 100%);
+            border: none;
+            border-radius: 12px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .custom-alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: none;
+            border-radius: 12px;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+
+        .custom-nav-tabs {
+            border: none;
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .custom-nav-link {
+            border: none;
+            border-radius: 8px;
+            color: #6c757d;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .custom-nav-link.active {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .custom-nav-link:hover:not(.active) {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+        }
+
+        /* Animation d'entrée des modals */
+        .modal.fade .modal-dialog {
+            transform: scale(0.9) translateY(-50px);
+            transition: transform 0.3s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Styles pour les boutons de partage */
+        .btn-outline-success:hover {
+            background: #28a745;
+            border-color: #28a745;
+        }
+
+        .btn-outline-primary:hover {
+            background: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-outline-info:hover {
+            background: #17a2b8;
+            border-color: #17a2b8;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            border-color: #6c757d;
+        }
+    </style>
+`);
+</script>
+{% endblock %}

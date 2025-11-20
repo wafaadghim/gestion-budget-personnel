@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Profil de {{ user.username }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Membre depuis:</strong> {{ user.created_at.strftime('%d/%m/%Y') }}
+                </div>
+                <div class="mb-3">
+                    <strong>Dépenses totales:</strong> {{ "%.3f"|format(total_expenses) }} DT
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Mes groupes</h4>
+            </div>
+            <div class="card-body">
+                {% if groups %}
+                <div class="list-group">
+                    {% for group in groups %}
+                    <a href="{{ url_for('group_detail', group_id=group.group.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ group.group.name }}</h5>
+                            <small>Créé le {{ group.group.created_at.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <p class="mb-1">{{ group.group.description }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Vous n'êtes membre d'aucun groupe.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Mes dernières dépenses</h4>
+            </div>
+            <div class="card-body">
+                {% if expenses %}
+                <div class="list-group">
+                    {% for expense in expenses[-5:]|reverse %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ expense.description }}</h6>
+                            <small>{{ "%.3f"|format(expense.amount) }} DT</small>
+                        </div>
+                        <small class="text-muted">Groupe: {{ expense.group.name }} - {{ expense.date.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Aucune dépense enregistrée.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Invitations envoyées</h4>
+            </div>
+            <div class="card-body">
+                {% if sent_invitations %}
+                <div class="list-group">
+                    {% for invitation in sent_invitations[-5:]|reverse %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>{{ invitation.invited_user.username }}</strong>
+                            <span class="badge 
+                                {% if invitation.status == 'pending' %}bg-warning
+                                {% elif invitation.status == 'accepted' %}bg-success
+                                {% else %}bg-danger{% endif %}">
+                                {{ invitation.status }}
+                            </span>
+                        </div>
+                        <small class="text-muted">Groupe: {{ invitation.group.name }}</small>
+                        <br>
+                        <small class="text-muted">{{ invitation.created_at.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Aucune invitation envoyée.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

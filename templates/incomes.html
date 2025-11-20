@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Revenus - Gestion des Ressources{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Mes Revenus</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('add_income') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Ajouter un revenu
+        </a>
+    </div>
+</div>
+
+<!-- Total du mois -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background-color: #dbeafe; color: #2563eb;">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stats-value" style="color: #2563eb;">{{ "%.3f"|format(total_month_income) }} DT</div>
+            <div class="stats-label">Total revenus du mois</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau des revenus -->
+<div class="card">
+    <div class="card-header">
+        <h5>Historique des revenus</h5>
+    </div>
+    <div class="card-body">
+        {% if incomes.items %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Catégorie</th>
+                            <th>Description</th>
+                            <th>Montant</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for income in incomes.items %}
+                        <tr>
+                            <td>{{ income.date.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ income.category }}</td>
+                            <td>{{ income.description or '-' }}</td>
+                            <td><strong>{{ "%.3f"|format(income.amount) }} DT</strong></td>
+                            <td>
+                                <a href="{{ url_for('edit_income', income_id=income.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </a>
+                                <a href="{{ url_for('delete_income', income_id=income.id) }}" 
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce revenu ?')">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Navigation des revenus">
+                <ul class="pagination justify-content-center">
+                    {% if incomes.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('incomes', page=incomes.prev_num) }}">Précédent</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in incomes.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == incomes.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('incomes', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if incomes.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('incomes', page=incomes.next_num) }}">Suivant</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% else %}
+            <p class="text-muted text-center">Aucun revenu enregistré.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier le Groupe - BudgetMaster{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Modifier le groupe</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Nom du groupe *</label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                   placeholder="Ex: Soirée entre amis" value="{{ group.name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="location" class="form-label">Lieu de rencontre</label>
+                            <input type="text" class="form-control" id="location" name="location"
+                                   placeholder="Ex: Restaurant Le Jardin" value="{{ group.location or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Décrivez l'objectif de ce groupe...">{{ group.description or '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="date_sortie" class="form-label">Date de sortie</label>
+                            <input type="text" class="form-control" id="date_sortie" name="date_sortie"
+                                   placeholder="JJ/MM/AAAA" pattern="\d{2}/\d{2}/\d{4}"
+                                   value="{% if group.date_sortie %}{{ group.date_sortie.strftime('%d/%m/%Y') }}{% endif %}">
+                            <div class="form-text">Format: JJ/MM/AAAA (ex: 25/12/2024)</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="heure_sortie" class="form-label">Heure de sortie</label>
+                            <input type="time" class="form-control" id="heure_sortie" name="heure_sortie"
+                                   value="{% if group.heure_sortie %}{{ group.heure_sortie.strftime('%H:%M') }}{% endif %}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="nombre_jours" class="form-label">Durée (jours)</label>
+                            <input type="number" class="form-control" id="nombre_jours" name="nombre_jours"
+                                   min="1" max="365" value="{{ group.nombre_jours }}" placeholder="Nombre de jours">
+                            <div class="form-text">Nombre de jours pendant lesquels le groupe sera actif</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Info:</strong> Seules les informations du groupe seront modifiées. Les membres et les dépenses existantes resteront inchangées.
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-2">
+                        <a href="{{ url_for('group_detail', group_id=group.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation du format de date
+document.getElementById('date_sortie').addEventListener('input', function() {
+    const datePattern = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (this.value && !datePattern.test(this.value)) {
+        this.setCustomValidity('Format invalide. Utilisez JJ/MM/AAAA');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+</script>
+{% endblock %}

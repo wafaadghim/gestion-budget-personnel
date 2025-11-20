@@ -1,0 +1,1064 @@
+{% extends "base.html" %}
+
+{% block title %}Paiements - BudgetMaster{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <h1 class="h2"><i class="fas fa-credit-card me-2"></i>Paiements</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="refreshPayments()">
+                <i class="fas fa-sync-alt me-1"></i>Actualiser
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques des paiements -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-euro-sign fa-2x text-success"></i>
+                </div>
+                <h3 class="card-title text-success">{{ "%.3f"|format(total_paid) }} DT</h3>
+                <p class="card-text text-muted">Total payé</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-clock fa-2x text-warning"></i>
+                </div>
+                <h3 class="card-title text-warning">{{ pending_payments|length }}</h3>
+                <p class="card-text text-muted">Paiements en attente</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="stat-icon mb-2">
+                    <i class="fas fa-check-circle fa-2x text-info"></i>
+                </div>
+                <h3 class="card-title text-info">{{ completed_payments|length }}</h3>
+                <p class="card-text text-muted">Paiements complétés</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Onglets pour les paiements -->
+<div class="row">
+    <div class="col-12">
+        <ul class="nav nav-tabs" id="paymentTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                    <i class="fas fa-clock me-1"></i>En attente
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                    <i class="fas fa-check-circle me-1"></i>Complétés
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                    <i class="fas fa-history me-1"></i>Historique
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3" id="paymentTabsContent">
+            <!-- Paiements en attente -->
+            <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Paiements en attente</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if pending_payments %}
+                            {% for payment in pending_payments %}
+                            <div class="payment-item mb-3 p-3 border rounded">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3" style="background: var(--primary-gradient);">
+                                                {{ payment.group.name[0].upper() }}
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">{{ payment.group.name }}</h6>
+                                                <p class="mb-0 text-muted small">
+                                                    {{ payment.description or 'Paiement de groupe' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <span class="badge bg-warning fs-6">{{ "%.3f"|format(payment.amount) }} DT</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="d-flex gap-2 justify-content-end">
+                                            <button class="btn btn-primary btn-sm" onclick="payNow({{ payment.id }}, {{ payment.amount }}, '{{ payment.group.name }}')">
+                                                <i class="fas fa-credit-card me-1"></i>Payer maintenant
+                                            </button>
+                                            <button class="btn btn-success btn-sm" onclick="markAsPaid({{ payment.id }})">
+                                                <i class="fas fa-check me-1"></i>Marquer payé
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="uploadProof({{ payment.id }})">
+                                                <i class="fas fa-upload me-1"></i>Justificatif
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted">Tous vos paiements sont à jour !</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paiements complétés -->
+            <div class="tab-pane fade" id="completed" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Paiements complétés</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if completed_payments %}
+                            {% for payment in completed_payments %}
+                            <div class="payment-item mb-3 p-3 border rounded bg-light">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3" style="background: var(--success-gradient);">
+                                                {{ payment.group.name[0].upper() }}
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">{{ payment.group.name }}</h6>
+                                                <p class="mb-0 text-muted small">
+                                                    {{ payment.description or 'Paiement de groupe' }}
+                                                </p>
+                                                <small class="text-success">
+                                                    <i class="fas fa-check-circle me-1"></i>
+                                                    Payé le {{ payment.paid_at.strftime('%d/%m/%Y') if payment.paid_at else 'N/A' }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <span class="badge bg-success fs-6">{{ "%.3f"|format(payment.amount) }} DT</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            {% if payment.proof_url %}
+                                                <button class="btn btn-outline-info btn-sm" onclick="viewProof('{{ payment.proof_url }}')">
+                                                    <i class="fas fa-eye me-1"></i>Voir justificatif
+                                                </button>
+                                            {% else %}
+                                                <span class="text-muted small">Aucun justificatif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Aucun paiement complété</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique complet -->
+            <div class="tab-pane fade" id="history" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Historique des paiements</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if all_payments %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Groupe</th>
+                                            <th>Description</th>
+                                            <th>Montant</th>
+                                            <th>Statut</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for payment in all_payments %}
+                                        <tr>
+                                            <td>{{ payment.group.name }}</td>
+                                            <td>{{ payment.description or 'Paiement de groupe' }}</td>
+                                            <td>{{ "%.3f"|format(payment.amount) }} DT</td>
+                                            <td>
+                                                {% if payment.status == 'paid' %}
+                                                    <span class="badge bg-success">Payé</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">En attente</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if payment.paid_at %}
+                                                    {{ payment.paid_at.strftime('%d/%m/%Y') }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if payment.proof_url %}
+                                                    <button class="btn btn-sm btn-outline-info" onclick="viewProof('{{ payment.proof_url }}')">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Aucun historique de paiement</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour upload de justificatif -->
+<div class="modal fade" id="proofModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header custom-modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-upload me-2"></i>Uploader un justificatif
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="proofForm" enctype="multipart/form-data">
+                <div class="modal-body custom-modal-body">
+                    <input type="hidden" id="paymentId" name="payment_id">
+                    <div class="mb-4">
+                        <label for="proofFile" class="form-label fw-bold">
+                            <i class="fas fa-file-upload me-2"></i>Sélectionner un fichier
+                        </label>
+                        <input type="file" class="form-control custom-file-input" id="proofFile" name="proof" accept="image/*,.pdf" required>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>Formats acceptés: JPG, PNG, PDF (max 5MB)
+                        </div>
+                    </div>
+                    <div class="file-preview mt-3" id="filePreview" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-file me-2"></i>
+                            <span id="fileName"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer custom-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary custom-submit-btn">
+                        <i class="fas fa-upload me-1"></i>Uploader
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour paiement automatique -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content custom-modal">
+            <div class="modal-header custom-modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-credit-card me-2"></i>Paiement automatique
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body custom-modal-body">
+                <div id="paymentInfo" class="mb-4">
+                    <!-- Informations du paiement seront insérées ici -->
+                </div>
+
+                <!-- Onglets pour les méthodes de paiement -->
+                <ul class="nav nav-pills nav-fill mb-4" id="paymentMethodTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="card-tab" data-bs-toggle="pill" data-bs-target="#card-payment" type="button" role="tab">
+                            <i class="fas fa-credit-card me-2"></i>Carte bancaire
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="bank-tab" data-bs-toggle="pill" data-bs-target="#bank-payment" type="button" role="tab">
+                            <i class="fas fa-university me-2"></i>Prélèvement bancaire
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="paymentMethodTabsContent">
+                    <!-- Paiement par carte -->
+                    <div class="tab-pane fade show active" id="card-payment" role="tabpanel">
+                        <form id="cardPaymentForm">
+                            <input type="hidden" id="modalPaymentId" name="payment_id">
+                            <input type="hidden" name="payment_method" value="card">
+
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label for="cardNumber" class="form-label fw-bold">
+                                        <i class="fas fa-credit-card me-2"></i>Numéro de carte
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text custom-input-group">
+                                            <i class="fas fa-credit-card"></i>
+                                        </span>
+                                        <input type="text" class="form-control custom-form-control" id="cardNumber" name="card_number"
+                                               placeholder="1234 5678 9012 3456" maxlength="19" required>
+                                    </div>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Format: 16 chiffres avec espaces
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="expiryDate" class="form-label fw-bold">
+                                        <i class="fas fa-calendar me-2"></i>Date d'expiration
+                                    </label>
+                                    <input type="text" class="form-control custom-form-control" id="expiryDate" name="expiry_date"
+                                           placeholder="MM/AA" maxlength="5" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cvv" class="form-label fw-bold">
+                                        <i class="fas fa-lock me-2"></i>Code de sécurité (CVV)
+                                    </label>
+                                    <input type="text" class="form-control custom-form-control" id="cvv" name="cvv"
+                                           placeholder="123" maxlength="4" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="cardHolder" class="form-label fw-bold">
+                                    <i class="fas fa-user me-2"></i>Nom du titulaire
+                                </label>
+                                <input type="text" class="form-control custom-form-control" id="cardHolder" name="card_holder"
+                                       placeholder="NOM Prénom" required>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Prélèvement bancaire -->
+                    <div class="tab-pane fade" id="bank-payment" role="tabpanel">
+                        <form id="bankPaymentForm">
+                            <input type="hidden" id="modalPaymentIdBank" name="payment_id">
+                            <input type="hidden" name="payment_method" value="bank">
+
+                            <div class="alert alert-info custom-alert mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Prélèvement bancaire:</strong> Le montant sera débité directement de votre compte bancaire.
+                                Cette méthode est sécurisée et ne nécessite pas de saisir vos coordonnées bancaires à chaque paiement.
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label for="accountHolder" class="form-label fw-bold">
+                                        <i class="fas fa-user me-2"></i>Titulaire du compte
+                                    </label>
+                                    <input type="text" class="form-control custom-form-control" id="accountHolder" name="account_holder"
+                                           placeholder="NOM Prénom" required>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Le nom doit correspondre exactement à celui figurant sur votre RIB
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label for="iban" class="form-label fw-bold">
+                                        <i class="fas fa-hashtag me-2"></i>IBAN
+                                    </label>
+                                    <input type="text" class="form-control custom-form-control iban-input" id="iban" name="iban"
+                                           placeholder="TN59 1234 5678 9012 3456 7890 123" maxlength="27" required>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Format: 27 caractères (commence par TN pour la Tunisie)
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="bic" class="form-label fw-bold">
+                                        <i class="fas fa-code me-2"></i>BIC/SWIFT
+                                    </label>
+                                    <input type="text" class="form-control custom-form-control bic-input" id="bic" name="bic"
+                                           placeholder="BTBK123" maxlength="11" required>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Code de 8 ou 11 caractères
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="bankName" class="form-label fw-bold">
+                                    <i class="fas fa-university me-2"></i>Nom de la banque
+                                </label>
+                                <input type="text" class="form-control custom-form-control" id="bankName" name="bank_name"
+                                       placeholder="Banque Centrale de Tunisie" required>
+                            </div>
+
+                            <div class="form-check mb-4">
+                                <input class="form-check-input" type="checkbox" id="mandateCheck" required>
+                                <label class="form-check-label" for="mandateCheck">
+                                    <small>
+                                        J'autorise le prélèvement automatique sur mon compte bancaire pour ce paiement et les futurs paiements de groupe.
+                                        Je peux révoquer ce mandat à tout moment.
+                                    </small>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="paymentMessages" class="mb-3" style="display: none;"></div>
+
+                <div class="alert alert-info custom-alert">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <strong>Sécurité:</strong> Toutes vos informations de paiement sont sécurisées et cryptées.
+                    <br><small class="text-muted">Cette fonctionnalité est en mode démonstration.</small>
+                </div>
+            </div>
+            <div class="modal-footer custom-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-success custom-submit-btn payment-btn" id="payButton" onclick="processPayment()">
+                    <i class="fas fa-credit-card me-2"></i>Payer maintenant
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markAsPaid(paymentId) {
+    if (confirm('Marquer ce paiement comme effectué ?')) {
+        fetch(`/payment/${paymentId}/mark-paid`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la mise à jour du paiement');
+            }
+        });
+    }
+}
+
+function payNow(paymentId, amount, groupName) {
+    // Remplir les informations du paiement
+    document.getElementById('modalPaymentId').value = paymentId;
+    document.getElementById('paymentInfo').innerHTML = `
+        <div class="card border-primary">
+            <div class="card-body">
+                <h6 class="card-title text-primary">${groupName}</h6>
+                <p class="card-text mb-2">Montant à payer: <strong>${amount.toFixed(3)} DT</strong></p>
+                <div class="alert alert-warning py-2">
+                    <small><i class="fas fa-exclamation-triangle me-1"></i>
+                    Cette fonctionnalité est en mode démonstration. En production, elle serait connectée à une passerelle de paiement sécurisée.</small>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Ouvrir le modal
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+function processPayment() {
+    const payButton = document.getElementById('payButton');
+    const originalText = payButton.innerHTML;
+
+    // Désactiver le bouton et afficher le chargement
+    payButton.disabled = true;
+    payButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement...';
+
+    // Déterminer quelle méthode de paiement est active
+    const activeTab = document.querySelector('#paymentMethodTabs .nav-link.active');
+    let formData;
+    let paymentMethod;
+
+    if (activeTab.id === 'card-tab') {
+        // Paiement par carte
+        const form = document.getElementById('cardPaymentForm');
+        formData = new FormData(form);
+        paymentMethod = 'card';
+
+        // Validation pour carte bancaire
+        const cardNumber = formData.get('card_number').replace(/\s/g, '');
+        const expiryDate = formData.get('expiry_date');
+        const cvv = formData.get('cvv');
+        const cardHolder = formData.get('card_holder');
+
+        let isValid = true;
+        let errorMessage = '';
+
+        // Validation du numéro de carte (format basique)
+        if (!/^\d{16}$/.test(cardNumber)) {
+            isValid = false;
+            errorMessage = 'Numéro de carte invalide (16 chiffres requis)';
+        }
+        // Validation de la date d'expiration
+        else if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+            isValid = false;
+            errorMessage = 'Format de date invalide (MM/AA)';
+        }
+        // Validation du CVV
+        else if (!/^\d{3,4}$/.test(cvv)) {
+            isValid = false;
+            errorMessage = 'CVV invalide (3-4 chiffres)';
+        }
+        // Validation du nom du titulaire
+        else if (cardHolder.trim().length < 2) {
+            isValid = false;
+            errorMessage = 'Nom du titulaire requis';
+        }
+
+        if (!isValid) {
+            showMessage(errorMessage);
+            payButton.disabled = false;
+            payButton.innerHTML = originalText;
+            return;
+        }
+
+    } else {
+        // Prélèvement bancaire
+        const form = document.getElementById('bankPaymentForm');
+        formData = new FormData(form);
+        paymentMethod = 'bank';
+
+        // Validation pour prélèvement bancaire
+        const accountHolder = formData.get('account_holder');
+        const iban = formData.get('iban').replace(/\s/g, '');
+        const bic = formData.get('bic');
+        const bankName = formData.get('bank_name');
+        const mandateAccepted = document.getElementById('mandateCheck').checked;
+
+        let isValid = true;
+        let errorMessage = '';
+
+        // Validation du titulaire
+        if (accountHolder.trim().length < 2) {
+            isValid = false;
+            errorMessage = 'Nom du titulaire requis';
+        }
+        // Validation de l'IBAN (format basique pour la Tunisie)
+        else if (!/^TN\d{22}$/.test(iban)) {
+            isValid = false;
+            errorMessage = 'IBAN invalide (doit commencer par TN suivi de 22 chiffres)';
+        }
+        // Validation du BIC
+        else if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic)) {
+            isValid = false;
+            errorMessage = 'BIC/SWIFT invalide';
+        }
+        // Validation du nom de banque
+        else if (bankName.trim().length < 2) {
+            isValid = false;
+            errorMessage = 'Nom de la banque requis';
+        }
+        // Validation du mandat
+        else if (!mandateAccepted) {
+            isValid = false;
+            errorMessage = 'Vous devez accepter le mandat de prélèvement';
+        }
+
+        if (!isValid) {
+            showMessage(errorMessage);
+            payButton.disabled = false;
+            payButton.innerHTML = originalText;
+            return;
+        }
+    }
+
+    // Conversion en objet JSON pour l'envoi
+    const data = {
+        payment_id: formData.get('payment_id'),
+        payment_method: paymentMethod
+    };
+
+    // Ajouter les champs spécifiques selon la méthode
+    if (paymentMethod === 'card') {
+        data.card_number = formData.get('card_number').replace(/\s/g, '');
+        data.expiry_date = formData.get('expiry_date');
+        data.cvv = formData.get('cvv');
+        data.card_holder = formData.get('card_holder');
+    } else {
+        data.account_holder = formData.get('account_holder');
+        data.iban = formData.get('iban').replace(/\s/g, '');
+        data.bic = formData.get('bic');
+        data.bank_name = formData.get('bank_name');
+    }
+
+    // Simulation de traitement de paiement (en production, ceci serait envoyé à une API de paiement)
+    setTimeout(() => {
+        // Simulation de paiement réussi
+        fetch(`/payment/${data.payment_id}/process-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fermer le modal et recharger la page
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                showMessage('Paiement effectué avec succès !', 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showMessage(data.message || 'Erreur inconnue');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showMessage('Erreur de connexion. Veuillez réessayer.');
+        })
+        .finally(() => {
+            // Réactiver le bouton
+            payButton.disabled = false;
+            payButton.innerHTML = originalText;
+        });
+    }, 2000); // Simulation de délai de traitement
+}
+
+function uploadProof(paymentId) {
+    document.getElementById('paymentId').value = paymentId;
+    new bootstrap.Modal(document.getElementById('proofModal')).show();
+}
+
+function viewProof(url) {
+    window.open(url, '_blank');
+}
+
+function showMessage(message, type = 'error') {
+    const messagesDiv = document.getElementById('paymentMessages');
+    messagesDiv.style.display = 'block';
+    messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
+    setTimeout(() => {
+        messagesDiv.style.display = 'none';
+    }, 5000);
+}
+
+function refreshPayments() {
+    location.reload();
+}
+
+// Gestionnaire pour le formulaire d'upload
+document.getElementById('proofForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    fetch('/upload-proof', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('proofModal')).hide();
+            location.reload();
+        } else {
+            alert('Erreur lors de l\'upload: ' + data.message);
+        }
+    });
+});
+
+// Gestionnaire pour l'aperçu du fichier
+document.getElementById('proofFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const previewDiv = document.getElementById('filePreview');
+    const fileNameSpan = document.getElementById('fileName');
+
+    if (file) {
+        fileNameSpan.textContent = file.name;
+        previewDiv.style.display = 'block';
+    } else {
+        previewDiv.style.display = 'none';
+    }
+});
+
+// Formatage automatique du numéro de carte
+document.getElementById('cardNumber').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\s/g, '');
+    value = value.replace(/\D/g, ''); // Supprimer les caractères non numériques
+    value = value.substring(0, 16); // Limiter à 16 chiffres
+
+    // Ajouter des espaces tous les 4 chiffres
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+            formatted += ' ';
+        }
+        formatted += value[i];
+    }
+
+    e.target.value = formatted;
+});
+
+// Formatage automatique de la date d'expiration
+document.getElementById('expiryDate').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 2) {
+        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+    }
+    e.target.value = value;
+});
+
+// Validation du CVV
+document.getElementById('cvv').addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '');
+});
+
+// Gestionnaire pour changer le texte du bouton selon la méthode de paiement
+document.getElementById('paymentMethodTabs').addEventListener('shown.bs.tab', function (e) {
+    const payButton = document.getElementById('payButton');
+    if (e.target.id === 'card-tab') {
+        payButton.innerHTML = '<i class="fas fa-credit-card me-2"></i>Payer par carte';
+    } else if (e.target.id === 'bank-tab') {
+        payButton.innerHTML = '<i class="fas fa-university me-2"></i>Payer par prélèvement';
+    }
+});
+
+// Formatage automatique de l'IBAN
+document.getElementById('iban').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\s/g, '').toUpperCase();
+    value = value.replace(/[^A-Z0-9]/g, ''); // Supprimer les caractères non alphanumériques
+
+    // Ajouter des espaces tous les 4 caractères
+    let formatted = '';
+    for (let i = 0; i < value.length && i < 27; i++) {
+        if (i > 0 && i % 4 === 0) {
+            formatted += ' ';
+        }
+        formatted += value[i];
+    }
+
+    e.target.value = formatted;
+});
+
+// Formatage automatique du BIC
+document.getElementById('bic').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+
+// Styles pour les paiements
+document.head.insertAdjacentHTML('beforeend', `
+    <style>
+        .payment-item {
+            transition: all 0.3s ease;
+        }
+
+        .payment-item:hover {
+            background-color: rgba(0,123,255,0.05);
+            transform: translateX(5px);
+        }
+
+        .avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .stat-icon {
+            opacity: 0.7;
+        }
+
+        .card-number-input {
+            font-family: monospace;
+        }
+
+        /* Styles personnalisés pour les modals */
+        .custom-modal {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .custom-modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px 20px 0 0;
+            padding: 20px 30px;
+        }
+
+        .custom-modal-body {
+            padding: 30px;
+            background: transparent;
+        }
+
+        .custom-modal-footer {
+            border: none;
+            padding: 20px 30px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 0 0 20px 20px;
+        }
+
+        .custom-form-control {
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .custom-form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: white;
+        }
+
+        .custom-file-input {
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
+
+        .custom-file-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: white;
+        }
+
+        .custom-input-group {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .custom-submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 12px 24px;
+            transition: all 0.3s ease;
+        }
+
+        .custom-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .custom-alert {
+            background: linear-gradient(135deg, #e3f3fd 0%, #bbdefb 100%);
+            border: none;
+            border-radius: 12px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .btn-outline-secondary {
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            border-color: #6c757d;
+        }
+
+        /* Animation d'entrée des modals */
+        .modal.fade .modal-dialog {
+            transform: scale(0.9) translateY(-50px);
+            transition: transform 0.3s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Styles pour les cartes d'information de paiement */
+        #paymentInfo .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,249,250,0.9) 100%);
+        }
+
+        #paymentInfo .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        #paymentInfo .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: none;
+            border-radius: 10px;
+            border-left: 4px solid #ffc107;
+        }
+
+        /* Styles pour les onglets de paiement */
+        .nav-pills .nav-link {
+            border-radius: 12px;
+            font-weight: 600;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-pills .nav-link:not(.active) {
+            background: rgba(248, 249, 250, 0.8);
+            color: #6c757d;
+            border: 2px solid #e1e8ed;
+        }
+
+        .nav-pills .nav-link:not(.active):hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            border-color: #667eea;
+        }
+
+        /* Styles pour les cases à cocher */
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        .form-check-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .form-check-label {
+            line-height: 1.4;
+        }
+
+        /* Styles pour les champs IBAN et BIC */
+        .iban-input, .bic-input {
+            font-family: monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .iban-input::placeholder {
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .bic-input::placeholder {
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        /* Animation pour les transitions d'onglets */
+        .tab-pane {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Styles pour les icônes de paiement */
+        .payment-method-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+        }
+
+        /* Amélioration des boutons de paiement */
+        .payment-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .payment-btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Styles pour les messages d'erreur */
+        .error-message {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border: none;
+            border-radius: 8px;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+            padding: 12px 16px;
+            margin-top: 10px;
+        }
+
+        /* Styles pour les messages de succès */
+        .success-message {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+            border: none;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+            padding: 12px 16px;
+            margin-top: 10px;
+        }
+    </style>
+`);
+</script>
+{% endblock %}

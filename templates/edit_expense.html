@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier une Dépense - Gestion des Dépenses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Modifier une Dépense</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="amount" class="form-label">Montant (dt)</label>
+                <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" 
+                       value="{{ expense.amount }}" required autocomplete="off">
+            </div>
+            
+            <div class="mb-3">
+                <label for="category" class="form-label">Catégorie</label>
+                <select class="form-select" id="category" name="category" required>
+                    <option value="">Choisir une catégorie</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}" {% if category == expense.category %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3" autocomplete="off">{{ expense.description or '' }}</textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="date" class="form-label">Date</label>
+                <input type="date" class="form-control" id="date" name="date" 
+                       value="{{ expense.date.strftime('%Y-%m-%d') }}" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Modifier la dépense</button>
+            <a href="{{ url_for('expenses') }}" class="btn btn-secondary">Annuler</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

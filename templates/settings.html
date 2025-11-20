@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres - BudgetMaster{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <h1 class="h2"><i class="fas fa-cog me-2"></i>Paramètres</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <!-- Menu latéral -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Menu</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="#profile" class="list-group-item list-group-item-action active" onclick="showSection('profile')">
+                    <i class="fas fa-user me-2"></i>Profil
+                </a>
+                <a href="#security" class="list-group-item list-group-item-action" onclick="showSection('security')">
+                    <i class="fas fa-shield-alt me-2"></i>Sécurité
+                </a>
+                <a href="#notifications" class="list-group-item list-group-item-action" onclick="showSection('notifications')">
+                    <i class="fas fa-bell me-2"></i>Notifications
+                </a>
+                <a href="#preferences" class="list-group-item list-group-item-action" onclick="showSection('preferences')">
+                    <i class="fas fa-sliders-h me-2"></i>Préférences
+                </a>
+                <a href="#data" class="list-group-item list-group-item-action" onclick="showSection('data')">
+                    <i class="fas fa-database me-2"></i>Données
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Section Profil -->
+        <div id="profile-section" class="settings-section">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>Informations du profil</h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="firstName" class="form-label">Prénom</label>
+                                <input type="text" class="form-control" id="firstName" name="first_name"
+                                       value="{{ current_user.first_name or '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="lastName" class="form-label">Nom</label>
+                                <input type="text" class="form-control" id="lastName" name="last_name"
+                                       value="{{ current_user.last_name or '' }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Adresse email</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ current_user.email }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone"
+                                   value="{{ current_user.phone or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">Biographie</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="3"
+                                      placeholder="Parlez un peu de vous...">{{ current_user.bio or '' }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Enregistrer les modifications
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Sécurité -->
+        <div id="security-section" class="settings-section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Changer le mot de passe</h5>
+                </div>
+                <div class="card-body">
+                    <form id="passwordForm">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Mot de passe actuel</label>
+                            <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nouveau mot de passe</label>
+                            <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                            <div class="form-text">Le mot de passe doit contenir au moins 8 caractères.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirmer le nouveau mot de passe</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-key me-1"></i>Changer le mot de passe
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>Authentification à deux facteurs</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1">Authentification 3fA</h6>
+                            <p class="text-muted small mb-0">Ajoutez une couche de sécurité supplémentaire à votre compte</p>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enable3fA" {{ 'checked' if current_user.two_factor_enabled else '' }}>
+                            <label class="form-check-label" for="enable3fA"></label>
+                        </div>
+                    </div>
+                    {% if current_user.two_factor_enabled %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>L'authentification 3fA est activée
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" onclick="disable3fA()">
+                            <i class="fas fa-times me-1"></i>Désactiver 3fA
+                        </button>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>L'authentification 3fA n'est pas activée
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="setup3fA()">
+                            <i class="fas fa-plus me-1"></i>Configurer 3fA
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Notifications -->
+        <div id="notifications-section" class="settings-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Préférences de notifications</h5>
+                </div>
+                <div class="card-body">
+                    <form id="notificationsForm">
+                        <div class="mb-4">
+                            <h6>Notifications par email</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailExpenses" name="email_expenses" checked>
+                                <label class="form-check-label" for="emailExpenses">
+                                    Alertes de dépenses élevées
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailBudgets" name="email_budgets" checked>
+                                <label class="form-check-label" for="emailBudgets">
+                                    Rappels de budget dépassé
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailGroups" name="email_groups" checked>
+                                <label class="form-check-label" for="emailGroups">
+                                    Activités des groupes
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailWeekly" name="email_weekly" checked>
+                                <label class="form-check-label" for="emailWeekly">
+                                    Rapport hebdomadaire
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Notifications push</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="pushInvitations" name="push_invitations" checked>
+                                <label class="form-check-label" for="pushInvitations">
+                                    Nouvelles invitations de groupe
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="pushPayments" name="push_payments" checked>
+                                <label class="form-check-label" for="pushPayments">
+                                    Rappels de paiements
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Fréquence des rapports</h6>
+                            <select class="form-select" id="reportFrequency" name="report_frequency">
+                                <option value="daily">Quotidien</option>
+                                <option value="weekly" selected>Hebdomadaire</option>
+                                <option value="monthly">Mensuel</option>
+                                <option value="never">Jamais</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Enregistrer les préférences
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Préférences -->
+        <div id="preferences-section" class="settings-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Préférences d'application</h5>
+                </div>
+                <div class="card-body">
+                    <form id="preferencesForm">
+                        <div class="mb-4">
+                            <h6>Devise</h6>
+                            <select class="form-select" id="currency" name="currency">
+                                <option value="DT" selected>Dinar Tunisien (DT)</option>
+                                <option value="USD">Dollar américain ($)</option>
+                                <option value="GBP">Livre sterling (£)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Langue</h6>
+                            <select class="form-select" id="language" name="language">
+                                <option value="fr" selected>Français</option>
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Thème</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="theme" id="themeLight" value="light" checked>
+                                <label class="form-check-label" for="themeLight">
+                                    <i class="fas fa-sun me-2"></i>Thème clair
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="theme" id="themeDark" value="dark">
+                                <label class="form-check-label" for="themeDark">
+                                    <i class="fas fa-moon me-2"></i>Thème sombre
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="theme" id="themeAuto" value="auto">
+                                <label class="form-check-label" for="themeAuto">
+                                    <i class="fas fa-adjust me-2"></i>Automatique
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Format de date</h6>
+                            <select class="form-select" id="dateFormat" name="date_format">
+                                <option value="jj/mm/aaaaY" selected>JJ/MM/AAAA</option>
+                                <option value="jj/mm/aaaa">MM/JJ/AAAA</option>
+                                <option value="YYYY-MM-DD">AAAA-MM-JJ</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Paramètres de confidentialité</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="profileVisible" name="profile_visible" checked>
+                                <label class="form-check-label" for="profileVisible">
+                                    Profil visible par les membres des groupes
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="shareStats" name="share_stats">
+                                <label class="form-check-label" for="shareStats">
+                                    Partager les statistiques anonymes
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Enregistrer les préférences
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Données -->
+        <div id="data-section" class="settings-section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-download me-2"></i>Exporter les données</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Téléchargez une copie de toutes vos données personnelles au format JSON.
+                    </p>
+                    <button class="btn btn-outline-primary" onclick="exportData()">
+                        <i class="fas fa-download me-1"></i>Exporter mes données
+                    </button>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-trash-alt me-2 text-danger"></i>Supprimer le compte</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention :</strong> Cette action est irréversible. Toutes vos données seront supprimées définitivement.
+                    </div>
+                    <button class="btn btn-danger" onclick="deleteAccount()">
+                        <i class="fas fa-trash-alt me-1"></i>Supprimer mon compte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showSection(sectionName) {
+    // Masquer toutes les sections
+    document.querySelectorAll('.settings-section').forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // Afficher la section sélectionnée
+    document.getElementById(sectionName + '-section').style.display = 'block';
+
+    // Mettre à jour le menu actif
+    document.querySelectorAll('.list-group-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[onclick="showSection('${sectionName}')"]`).classList.add('active');
+}
+
+// Gestionnaire pour le formulaire de profil
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    fetch('/update-profile', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Profil mis à jour avec succès !');
+        } else {
+            alert('Erreur lors de la mise à jour du profil');
+        }
+    });
+});
+
+// Gestionnaire pour le formulaire de mot de passe
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (newPassword !== confirmPassword) {
+        alert('Les mots de passe ne correspondent pas');
+        return;
+    }
+
+    const formData = new FormData(this);
+
+    fetch('/change-password', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Mot de passe changé avec succès !');
+            this.reset();
+        } else {
+            alert('Erreur lors du changement de mot de passe: ' + data.message);
+        }
+    });
+});
+
+// Gestionnaire pour les notifications
+document.getElementById('notificationsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    fetch('/update-notifications', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Préférences de notifications mises à jour !');
+        } else {
+            alert('Erreur lors de la mise à jour');
+        }
+    });
+});
+
+// Gestionnaire pour les préférences
+document.getElementById('preferencesForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    fetch('/update-preferences', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Préférences mises à jour !');
+            location.reload();
+        } else {
+            alert('Erreur lors de la mise à jour');
+        }
+    });
+});
+
+function setup3fA() {
+    // Fonctionnalité 3fA à implémenter
+    alert('Configuration 3fA à implémenter');
+}
+
+function disable3fA() {
+    if (confirm('Êtes-vous sûr de vouloir désactiver l\'authentification 3fA ?')) {
+        fetch('/disable-3fa', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la désactivation 3fA');
+            }
+        });
+    }
+}
+
+function exportData() {
+    fetch('/export-data')
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'budgetmaster-data.json';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    });
+}
+
+function deleteAccount() {
+    if (confirm('Êtes-vous vraiment sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) {
+        if (confirm('Dernière confirmation : toutes vos données seront supprimées. Continuer ?')) {
+            fetch('/delete-account', {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/logout';
+                } else {
+                    alert('Erreur lors de la suppression du compte');
+                }
+            });
+        }
+    }
+}
+
+// Gestionnaire pour le toggle 3fA
+document.getElementById('enable3fA').addEventListener('change', function() {
+    if (this.checked) {
+        setup3fA();
+    } else {
+        disable3fA();
+    }
+});
+</script>
+{% endblock %}

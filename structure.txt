@@ -1,0 +1,19 @@
+group_expenses_app/
+├── app.py
+├── models.py
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── script.js
+├── templates/
+│   ├── base.html
+│   ├── index.html
+│   ├── login.html
+│   ├── register.html
+│   ├── dashboard.html
+│   ├── create_group.html
+│   ├── group_detail.html
+│   ├── invitations.html
+│   └── profile.html
+└── requirements.txt

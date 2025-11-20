@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Accepter l'invitation - BudgetMaster{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Invitation à rejoindre un groupe
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    {% if group %}
+                    <div class="mb-4">
+                        <div class="group-avatar mb-3" style="background: var(--primary-gradient); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem; font-weight: bold;">
+                            {{ group.name[0].upper() }}
+                        </div>
+                        <h5 class="card-title">{{ group.name }}</h5>
+                        {% if group.description %}
+                        <p class="text-muted">{{ group.description }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Vous avez été invité à rejoindre ce groupe.
+                        {% if group.creator %}
+                        Invité par: <strong>{{ group.creator.username }}</strong>
+                        {% endif %}
+                    </div>
+
+                    {% if current_user.is_authenticated %}
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('accept_invitation_by_token', token=token) }}" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-check me-2"></i>
+                                Accepter l'invitation
+                            </a>
+                            <a href="{{ url_for('reject_invitation_by_token', token=token) }}" class="btn btn-danger btn-lg w-100" onclick="return confirm('Êtes-vous sûr de vouloir refuser cette invitation ?')">
+                                <i class="fas fa-times me-2"></i>
+                                Refuser l'invitation
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Connexion requise</strong><br>
+                            Vous devez vous connecter pour accepter cette invitation.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Se connecter
+                            </a>
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-user-plus me-2"></i>
+                                Créer un compte
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if group.location or group.date_sortie %}
+                    <hr>
+                    <div class="row text-start">
+                        {% if group.location %}
+                        <div class="col-6">
+                            <strong><i class="fas fa-map-marker-alt me-2 text-danger"></i>Lieu:</strong><br>
+                            {{ group.location }}
+                        </div>
+                        {% endif %}
+                        {% if group.date_sortie %}
+                        <div class="col-6">
+                            <strong><i class="fas fa-calendar me-2 text-success"></i>Date:</strong><br>
+                            {{ group.date_sortie.strftime('%d/%m/%Y') }}
+                            {% if group.heure_sortie %}
+                            à {{ group.heure_sortie.strftime('%H:%M') }}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+                    </div>
+                    {% endif %}
+                </div><style>
+.group-avatar {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}
