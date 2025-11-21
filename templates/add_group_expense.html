@@ -39,8 +39,7 @@
 
                     <div class="mb-3">
                         <label for="date" class="form-label">Date *</label>
-                        <input type="date" class="form-control" id="date" name="date"
-                               value="{{ today.strftime('%Y-%m-%d') }}" required>
+                        <input type="text" class="form-control" id="date" name="date" required>
                     </div>
 
                     <div class="mb-3">
@@ -114,6 +113,15 @@
 </div>
 
 <script>
+// Initialiser Flatpickr pour le champ de date avec format jj/mm/aaaa
+flatpickr("#date", {
+    locale: "fr",
+    dateFormat: "d/m/Y",
+    defaultDate: new Date(),
+    maxDate: new Date(),
+    allowInput: true
+});
+
 // Calcul automatique de la part par personne
 document.getElementById('amount').addEventListener('input', function() {
     const amount = parseFloat(this.value) || 0;

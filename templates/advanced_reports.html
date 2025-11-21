@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Rapports Avancés - BudgetMaster{% endblock %}
+{% block title %}Analyse Financière Avancée - BudgetMaster{% endblock %}
 
 {% block content %}
+<!-- En-tête de page -->
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
-    <h1 class="h2"><i class="fas fa-chart-line me-2"></i>Rapports Avancés</h1>
+    <div>
+        <h1 class="h2 mb-1"><i class="fas fa-chart-line me-2"></i>Analyse Financière Avancée</h1>
+        <p class="text-muted mb-0">Vue d'ensemble complète de vos finances personnelles</p>
+    </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <button type="button" class="btn btn-outline-primary" onclick="exportReport()">
@@ -17,22 +21,165 @@
     </div>
 </div>
 
+<!-- Période actuelle -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info border-0 shadow-sm">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-calendar-alt fa-lg me-3 text-info"></i>
+                <div>
+                    <h6 class="mb-1">Période d'analyse</h6>
+                    <strong>{{ period_info.label }}</strong> ({{ period_info.start }} - {{ period_info.end }})
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SYNTHÈSE FINANCIÈRE -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Synthèse Financière</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Ratios financiers -->
+                    <div class="col-lg-4">
+                        <h6 class="text-muted mb-3"><i class="fas fa-calculator me-2"></i>Ratios Clés</h6>
+                        <div class="ratio-item mb-3 p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Ratio Dépenses/Revenus</span>
+                                <strong class="text-{{ 'danger' if total_income > 0 and (total_expenses / total_income * 100) > 90 else 'warning' if total_income > 0 and (total_expenses / total_income * 100) > 75 else 'success' }}">
+                                    {{ "%.1f"|format(total_expenses / total_income * 100) if total_income > 0 else 0 }}%
+                                </strong>
+                            </div>
+                            <small class="text-muted">Pourcentage des revenus dépensés</small>
+                        </div>
+                        <div class="ratio-item mb-3 p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Épargne/Revenus</span>
+                                <strong class="text-{{ 'success' if savings_rate >= 20 else 'warning' }}">
+                                    {{ "%.1f"|format(savings_rate) }}%
+                                </strong>
+                            </div>
+                            <small class="text-muted">Capacité d'épargne</small>
+                        </div>
+                        <div class="ratio-item p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Transactions/mois</span>
+                                <strong class="text-info">
+                                    {{ "%.1f"|format((income_count + expense_count) / 6) if (income_count + expense_count) > 0 else 0 }}
+                                </strong>
+                            </div>
+                            <small class="text-muted">Activité moyenne mensuelle</small>
+                        </div>
+                    </div>
+
+                    <!-- État actuel -->
+                    <div class="col-lg-4">
+                        <h6 class="text-muted mb-3"><i class="fas fa-balance-scale me-2"></i>État Financier</h6>
+                        <div class="financial-status p-4 text-center bg-light rounded">
+                            {% if balance > 0 %}
+                                <div class="status-icon mb-3">
+                                    <i class="fas fa-thumbs-up fa-3x text-success"></i>
+                                </div>
+                                <h5 class="text-success">Situation Positive</h5>
+                                <p class="mb-0">Vous avez un excédent de {{ "%.3f"|format(balance) }} DT</p>
+                            {% elif balance == 0 %}
+                                <div class="status-icon mb-3">
+                                    <i class="fas fa-balance-scale fa-3x text-warning"></i>
+                                </div>
+                                <h5 class="text-warning">Équilibre</h5>
+                                <p class="mb-0">Revenus = Dépenses</p>
+                            {% else %}
+                                <div class="status-icon mb-3">
+                                    <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                                </div>
+                                <h5 class="text-danger">Déficit</h5>
+                                <p class="mb-0">Déficit de {{ "%.3f"|format(-balance) }} DT</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Tendances -->
+                    <div class="col-lg-4">
+                        <h6 class="text-muted mb-3"><i class="fas fa-chart-line me-2"></i>Tendances</h6>
+                        <div class="trend-analysis">
+                            <div class="trend-item mb-3 p-3 bg-light rounded">
+                                <div class="d-flex align-items-center">
+                                    <div class="trend-indicator me-3">
+                                        <i class="fas fa-arrow-{{ 'up' if income_growth >= 0 else 'down' }} fa-lg text-{{ 'success' if income_growth >= 0 else 'danger' }}"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Revenus</strong><br>
+                                        <small class="text-{{ 'success' if income_growth >= 0 else 'danger' }}">
+                                            {{ "%.1f"|format(income_growth) }}% vs période précédente
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="trend-item mb-3 p-3 bg-light rounded">
+                                <div class="d-flex align-items-center">
+                                    <div class="trend-indicator me-3">
+                                        <i class="fas fa-arrow-{{ 'up' if expense_growth <= 0 else 'down' }} fa-lg text-{{ 'success' if expense_growth <= 0 else 'danger' }}"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Dépenses</strong><br>
+                                        <small class="text-{{ 'success' if expense_growth <= 0 else 'danger' }}">
+                                            {{ "%.1f"|format(expense_growth) }}% vs période précédente
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="trend-item p-3 bg-light rounded">
+                                <div class="d-flex align-items-center">
+                                    <div class="trend-indicator me-3">
+                                        <i class="fas fa-arrow-{{ 'up' if savings_rate >= 20 else 'down' }} fa-lg text-{{ 'success' if savings_rate >= 20 else 'warning' }}"></i>
+                                    </div>
+                                    <div>
+                                        <strong>Épargne</strong><br>
+                                        <small class="text-{{ 'success' if savings_rate >= 20 else 'warning' }}">
+                                            Taux actuel: {{ "%.1f"|format(savings_rate) }}%
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Filtres -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtres</h5>
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtres et période</h5>
             </div>
             <div class="card-body">
                 <form id="filterForm" class="row g-3">
-                    <div class="col-md-3">
-                        <label for="dateFrom" class="form-label">Date de début</label>
-                        <input type="date" class="form-control" id="dateFrom" name="date_from">
+                    <div class="col-md-2">
+                        <label for="period" class="form-label">Période</label>
+                        <select class="form-select" id="period" name="period">
+                            <option value="current_year" {% if current_period == 'current_year' %}selected{% endif %}>Année en cours</option>
+                            <option value="last_year" {% if current_period == 'last_year' %}selected{% endif %}>Année dernière</option>
+                            <option value="current_month" {% if current_period == 'current_month' %}selected{% endif %}>Mois en cours</option>
+                            <option value="last_month" {% if current_period == 'last_month' %}selected{% endif %}>Mois dernier</option>
+                            <option value="custom" {% if current_period == 'custom' %}selected{% endif %}>Période personnalisée</option>
+                        </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2" id="dateFromContainer" style="{% if current_period != 'custom' %}display: none;{% endif %}">
+                        <label for="dateFrom" class="form-label">Date de début</label>
+                        <input type="date" class="form-control" id="dateFrom" name="date_from" value="{{ period_info.start }}">
+                    </div>
+                    <div class="col-md-2" id="dateToContainer" style="{% if current_period != 'custom' %}display: none;{% endif %}">
                         <label for="dateTo" class="form-label">Date de fin</label>
-                        <input type="date" class="form-control" id="dateTo" name="date_to">
+                        <input type="date" class="form-control" id="dateTo" name="date_to" value="{{ period_info.end }}">
                     </div>
                     <div class="col-md-3">
                         <label for="category" class="form-label">Catégorie</label>
@@ -43,21 +190,14 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label for="group" class="form-label">Groupe</label>
-                        <select class="form-select" id="group" name="group">
-                            <option value="">Tous les groupes</option>
-                            {% for group in user_groups %}
-                                <option value="{{ group.group.id }}">{{ group.group.name }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-1"></i>Appliquer
+                        </button>
                     </div>
                     <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i>Appliquer les filtres
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetFilters()">
-                            <i class="fas fa-undo me-1"></i>Réinitialiser
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo me-1"></i>Réinitialiser les filtres
                         </button>
                     </div>
                 </form>
@@ -66,113 +206,202 @@
     </div>
 </div>
 
-<!-- Métriques principales -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stat-icon mb-2">
-                    <i class="fas fa-euro-sign fa-2x text-success"></i>
-                </div>
-                <h3 class="card-title text-success">{{ "%.3f"|format(total_income) }} DT</h3>
-                <p class="card-text text-muted">Revenus totaux</p>
-                <small class="text-success">
-                    <i class="fas fa-arrow-up me-1"></i>+{{ "%.1f"|format(income_growth) }}%
-                </small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stat-icon mb-2">
-                    <i class="fas fa-shopping-cart fa-2x text-danger"></i>
-                </div>
-                <h3 class="card-title text-danger">{{ "%.3f"|format(total_expenses) }} DT</h3>
-                <p class="card-text text-muted">Dépenses totales</p>
-                <small class="text-danger">
-                    <i class="fas fa-arrow-down me-1"></i>{{ "%.1f"|format(expense_growth) }}%
-                </small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stat-icon mb-2">
-                    <i class="fas fa-balance-scale fa-2x text-info"></i>
-                </div>
-                <h3 class="card-title text-info">{{ "%.3f"|format(balance) }} DT</h3>
-                <p class="card-text text-muted">Solde actuel</p>
-                <small class="text-{{ 'success' if balance >= 0 else 'danger' }}">
-                    <i class="fas fa-{{ 'plus' if balance >= 0 else 'minus' }} me-1"></i>
-                    {{ "%.1f"|format(balance_percentage) }}%
-                </small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="stat-icon mb-2">
-                    <i class="fas fa-chart-pie fa-2x text-warning"></i>
-                </div>
-                <h3 class="card-title text-warning">{{ "%.1f"|format(savings_rate) }}%</h3>
-                <p class="card-text text-muted">Taux d'épargne</p>
-                <small class="text-{{ 'success' if savings_rate >= 20 else 'warning' }}">
-                    <i class="fas fa-target me-1"></i>
-                    {{ 'Excellent' if savings_rate >= 20 else 'À améliorer' }}
-                </small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Graphiques -->
-<div class="row mb-4">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Évolution des finances</h5>
-            </div>
-            <div class="card-body">
-                <div style="width: 100%; height: 350px;">
-                    <canvas id="financeChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Répartition des dépenses</h5>
-            </div>
-            <div class="card-body d-flex justify-content-center">
-                <div style="width: 100%; height: 300px; max-width: 300px;">
-                    <canvas id="expenseChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Analyse par catégories -->
-<div class="row mb-4">
+<!-- TABLEAU DE BORD D'ENSEMBLE -->
+<div class="row mb-5">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Analyse par catégories</h5>
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Tableau de Bord Financier</h5>
             </div>
             <div class="card-body">
+                <div class="row g-4">
+                    <!-- Revenus Totaux -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card h-100 border-success shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-euro-sign fa-3x text-success"></i>
+                                </div>
+                                <h2 class="text-success fw-bold mb-1">{{ "%.3f"|format(total_income) }} DT</h2>
+                                <h6 class="text-muted mb-2">Revenus Totaux</h6>
+                                <div class="progress mb-2" style="height: 6px;">
+                                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                                </div>
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-up me-1"></i>+{{ "%.1f"|format(income_growth) }}% vs période précédente
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dépenses Totales -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card h-100 border-danger shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-shopping-cart fa-3x text-danger"></i>
+                                </div>
+                                <h2 class="text-danger fw-bold mb-1">{{ "%.3f"|format(total_expenses) }} DT</h2>
+                                <h6 class="text-muted mb-2">Dépenses Totales</h6>
+                                <div class="progress mb-2" style="height: 6px;">
+                                    <div class="progress-bar bg-danger" style="width: {{ (total_expenses / total_income * 100) if total_income > 0 else 0 }}%"></div>
+                                </div>
+                                <small class="text-danger">
+                                    <i class="fas fa-arrow-{{ 'up' if expense_growth > 0 else 'down' }} me-1"></i>{{ "%.1f"|format(expense_growth) }}% vs période précédente
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Solde Net -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card h-100 border-info shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-balance-scale fa-3x text-info"></i>
+                                </div>
+                                <h2 class="text-info fw-bold mb-1">{{ "%.3f"|format(balance) }} DT</h2>
+                                <h6 class="text-muted mb-2">Solde Net</h6>
+                                <div class="progress mb-2" style="height: 6px;">
+                                    <div class="progress-bar bg-info" style="width: {{ (balance / total_income * 100) if total_income > 0 else 0 }}%"></div>
+                                </div>
+                                <small class="text-{{ 'success' if balance >= 0 else 'danger' }}">
+                                    <i class="fas fa-{{ 'plus' if balance >= 0 else 'minus' }} me-1"></i>
+                                    {{ "%.1f"|format(balance_percentage) }}% des revenus
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Taux d'Épargne -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card h-100 border-warning shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-piggy-bank fa-3x text-warning"></i>
+                                </div>
+                                <h2 class="text-warning fw-bold mb-1">{{ "%.1f"|format(savings_rate) }}%</h2>
+                                <h6 class="text-muted mb-2">Taux d'Épargne</h6>
+                                <div class="progress mb-2" style="height: 6px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ savings_rate }}%"></div>
+                                </div>
+                                <small class="text-{{ 'success' if savings_rate >= 20 else 'warning' }}">
+                                    <i class="fas fa-target me-1"></i>
+                                    {{ 'Excellent' if savings_rate >= 20 else 'À améliorer' }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicateurs clés supplémentaires -->
+                <div class="row mt-4 pt-4 border-top">
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-primary">{{ income_count }}</h4>
+                        <small class="text-muted">Revenus enregistrés</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-warning">{{ expense_count }}</h4>
+                        <small class="text-muted">Dépenses enregistrées</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-info">{{ "%.1f"|format(avg_income) }} DT</h4>
+                        <small class="text-muted">Revenu moyen</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-secondary">{{ "%.1f"|format(avg_expense) }} DT</h4>
+                        <small class="text-muted">Dépense moyenne</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ANALYSE TEMPORELLE -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Analyse Temporelle</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="chart-container mb-4">
+                            <h6 class="text-muted mb-3"><i class="fas fa-chart-line me-2"></i>Évolution des Revenus et Dépenses</h6>
+                            <div style="width: 100%; height: 400px;">
+                                <canvas id="financeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-container mb-4">
+                            <h6 class="text-muted mb-3"><i class="fas fa-chart-pie me-2"></i>Répartition des Dépenses</h6>
+                            <div style="width: 100%; height: 350px;">
+                                <canvas id="expenseChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Résumé graphique -->
+                        <div class="summary-box p-3 bg-light rounded">
+                            <h6 class="text-muted mb-2"><i class="fas fa-info-circle me-2"></i>Résumé</h6>
+                            <p class="mb-1 small">Sur les 6 derniers mois :</p>
+                            <ul class="list-unstyled small mb-0">
+                                <li><strong>Revenus moyens :</strong> {% set income_sum = 0 %}{% for income in monthly_income %}{% set income_sum = income_sum + income %}{% endfor %}{{ "%.1f"|format(income_sum / monthly_income|length) if monthly_income else 0 }} DT/mois</li>
+                                <li><strong>Dépenses moyennes :</strong> {% set expense_sum = 0 %}{% for expense in monthly_expenses %}{% set expense_sum = expense_sum + expense %}{% endfor %}{{ "%.1f"|format(expense_sum / monthly_expenses|length) if monthly_expenses else 0 }} DT/mois</li>
+                                <li><strong>Catégorie principale :</strong> {% if category_analysis %}{{ category_analysis[0].name }}{% else %}N/A{% endif %}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ANALYSE DÉTAILLÉE PAR CATÉGORIES -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Analyse Détaillée par Catégories</h5>
+            </div>
+            <div class="card-body">
+                <!-- Liste des catégories -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-3"><i class="fas fa-list me-2"></i>Catégories utilisées</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for category in categories %}
+                        <span class="badge bg-primary fs-6 px-3 py-2">{{ category }}</span>
+                        {% endfor %}
+                        {% if not categories %}
+                        <span class="text-muted">Aucune catégorie trouvée</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-3"><i class="fas fa-list me-2"></i>Catégories utilisées</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for category in categories %}
+                        <span class="badge bg-primary fs-6 px-3 py-2">{{ category }}</span>
+                        {% endfor %}
+                        {% if not categories %}
+                        <span class="text-muted">Aucune catégorie trouvée</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Tableau détaillé des catégories -->
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
-                                <th>Catégorie</th>
-                                <th>Dépenses</th>
-                                <th>Pourcentage</th>
-                                <th>Évolution</th>
-                                <th>Moyenne/mois</th>
+                                <th><i class="fas fa-tag me-2"></i>Catégorie</th>
+                                <th><i class="fas fa-euro-sign me-2"></i>Montant</th>
+                                <th><i class="fas fa-percentage me-2"></i>Pourcentage</th>
+                                <th><i class="fas fa-chart-line me-2"></i>Évolution</th>
+                                <th><i class="fas fa-calendar me-2"></i>Moyenne/mois</th>
+                                <th><i class="fas fa-cogs me-2"></i>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -180,210 +409,44 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="category-icon me-2" style="background: {{ category.color }};">
+                                        <div class="category-icon me-3" style="background: {{ category.color }};">
                                             <i class="fas fa-{{ category.icon }}"></i>
                                         </div>
-                                        {{ category.name }}
-                                    </div>
-                                </td>
-                                <td class="fw-bold">{{ "%.3f"|format(category.total) }} DT</td>
-                                <td>
-                                    <div class="progress" style="width: 100px;">
-                                        <div class="progress-bar" role="progressbar"
-                                             style="width: {{ category.percentage }}%; background: {{ category.color }};">
-                                            {{ "%.1f"|format(category.percentage) }}%
+                                        <div>
+                                            <strong>{{ category.name }}</strong>
+                                            {% if category.percentage >= 25 %}
+                                            <br><small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Catégorie principale</small>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </td>
+                                <td class="fw-bold text-danger">{{ "%.3f"|format(category.total) }} DT</td>
                                 <td>
-                                    <span class="badge bg-{{ 'success' if category.trend > 0 else 'danger' }}">
-                                        <i class="fas fa-arrow-{{ 'up' if category.trend > 0 else 'down' }} me-1"></i>
-                                        {{ "%.1f"|format(category.trend) }}%
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar" role="progressbar"
+                                                 style="width: {{ category.percentage }}%; background: {{ category.color }};">
+                                            </div>
+                                        </div>
+                                        <strong>{{ "%.1f"|format(category.percentage) }}%</strong>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if category.trend <= 0 else 'danger' }} fs-6">
+                                        <i class="fas fa-arrow-{{ 'down' if category.trend <= 0 else 'up' }} me-1"></i>
+                                        {{ "%.1f"|format(category.trend if category.trend >= 0 else -category.trend) }}%
                                     </span>
                                 </td>
-                                <td>{{ "%.3f"|format(category.monthly_avg) }} DT</td>
+                                <td class="text-info">{{ "%.3f"|format(category.monthly_avg) }} DT</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewCategoryDetails('{{ category.name }}')">
+                                        <i class="fas fa-eye me-1"></i>Détails
+                                    </button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Tendances et prédictions -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Tendances mensuelles</h5>
-            </div>
-            <div class="card-body">
-                <div style="width: 100%; height: 350px;">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Recommandations intelligentes -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommandations personnalisées</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for recommendation in recommendations %}
-                    <div class="col-md-6 mb-3">
-                        <div class="recommendation-item p-3 border rounded h-100">
-                            <div class="d-flex align-items-start">
-                                <div class="recommendation-icon me-3">
-                                    <i class="fas fa-{{ recommendation.icon }} fa-lg text-{{ recommendation.type }}"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">{{ recommendation.title }}</h6>
-                                    <p class="mb-1 text-muted small">{{ recommendation.description }}</p>
-                                    <small class="text-{{ recommendation.type }}">
-                                        <i class="fas fa-chart-line me-1"></i>
-                                        Impact potentiel: {{ recommendation.impact }}
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Comparaisons et objectifs -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Comparaison Revenus/Dépenses</h5>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <h4 class="text-success">{{ "%.3f"|format(total_income) }} dt</h4>
-                        <small class="text-muted">Total Revenus</small>
-                    </div>
-                    <div class="col-6">
-                        <h4 class="text-danger">{{ "%.3f"|format(total_expenses) }} dt</h4>
-                        <small class="text-muted">Total Dépenses</small>
-                    </div>
-                </div>
-                <hr>
-                <div class="text-center">
-                    {% if total_income > total_expenses %}
-                        <span class="badge bg-success fs-6">Économie: {{ "%.3f"|format(total_income - total_expenses) }} dt</span>
-                    {% elif total_expenses > total_income %}
-                        <span class="badge bg-danger fs-6">Déficit: {{ "%.3f"|format(total_expenses - total_income) }} dt</span>
-                    {% else %}
-                        <span class="badge bg-warning fs-6">Équilibre</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Statistiques par période</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-6">
-                        <div class="text-center mb-3">
-                            <h5 class="text-primary">{{ income_count }}</h5>
-                            <small class="text-muted">Revenus enregistrés</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-center mb-3">
-                            <h5 class="text-warning">{{ expense_count }}</h5>
-                            <small class="text-muted">Dépenses enregistrées</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-6">
-                        <div class="text-center">
-                            <h6 class="text-info">{{ "%.1f"|format(avg_income) }} dt</h6>
-                            <small class="text-muted">Revenu moyen</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-center">
-                            <h6 class="text-secondary">{{ "%.1f"|format(avg_expense) }} dt</h6>
-                            <small class="text-muted">Dépense moyenne</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Comparaison avec le mois précédent -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Évolution par rapport au mois dernier</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="comparison-item mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span>Revenus</span>
-                                <span class="badge bg-{{ 'success' if income_comparison >= 0 else 'danger' }}">
-                                    {{ "%.1f"|format(income_comparison) }}%
-                                </span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar bg-success" style="width: {{ (income_comparison + 100) / 2 }}%"></div>
-                            </div>
-                        </div>
-                        <div class="comparison-item">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span>Dépenses</span>
-                                <span class="badge bg-{{ 'success' if expense_comparison <= 0 else 'danger' }}">
-                                    {{ "%.1f"|format(expense_comparison) }}%
-                                </span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar bg-danger" style="width: {{ (expense_comparison + 100) / 2 }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Objectifs d'épargne</h6>
-                        <div class="savings-goals">
-                            {% for goal in savings_goals %}
-                            <div class="goal-item mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span>{{ goal.name }}</span>
-                                    <span class="text-muted">{{ "%.0f"|format(goal.progress) }}%</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" style="width: {{ goal.progress }}%"></div>
-                                </div>
-                                <small class="text-muted">
-                                    {{ "%.3f"|format(goal.current) }} DT / {{ "%.3f"|format(goal.target) }} DT
-                                </small>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -441,7 +504,7 @@
                             <div class="card-body text-center">
                                 <h6 class="card-title">Moyenne mensuelle</h6>
                                 <h5 class="text-info" id="categoryMonthlyAvg">0.000 DT</h5>
-                                <p class="card-text text-muted small">Sur les 6 derniers mois</p>
+                                <p class="card-text text-muted small">Sur la période sélectionnée</p>
                             </div>
                         </div>
                     </div>
@@ -798,7 +861,7 @@ function viewCategoryDetails(category) {
 
         // Changer la couleur du badge selon la tendance
         const trendBadge = document.getElementById('categoryTrendBadge');
-        trendBadge.className = `badge bg-${categoryInfo.trend > 0 ? 'danger' : 'success'}`;
+        trendBadge.className = `badge bg-${categoryInfo.trend > 0 ? 'danger' : 'success'} fs-6`;
         trendBadge.innerHTML = `<i class="fas fa-arrow-${categoryInfo.trend > 0 ? 'up' : 'down'} me-1"></i>${Math.abs(categoryInfo.trend).toFixed(1)}%`;
 
         // Afficher la modal
@@ -823,26 +886,59 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
     window.location.search = params.toString();
 });
 
+// Gestionnaire pour le changement de période
+document.getElementById('period').addEventListener('change', function() {
+    const period = this.value;
+    const dateFromContainer = document.getElementById('dateFromContainer');
+    const dateToContainer = document.getElementById('dateToContainer');
+
+    if (period === 'custom') {
+        dateFromContainer.style.display = 'block';
+        dateToContainer.style.display = 'block';
+    } else {
+        dateFromContainer.style.display = 'none';
+        dateToContainer.style.display = 'none';
+    }
+});
+
+function resetFilters() {
+    // Réinitialiser tous les filtres et revenir à la période par défaut (année en cours)
+    document.getElementById('period').value = 'current_year';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    document.getElementById('category').value = '';
+
+    // Masquer les champs de date personnalisée
+    document.getElementById('dateFromContainer').style.display = 'none';
+    document.getElementById('dateToContainer').style.display = 'none';
+
+    // Recharger la page sans paramètres
+    window.location.href = window.location.pathname;
+}
+
 // Styles supplémentaires
 document.head.insertAdjacentHTML('beforeend', `
     <style>
         .category-icon {
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
+            font-size: 14px;
         }
 
-        .recommendation-item {
+        .recommendation-card {
             transition: all 0.3s ease;
+            border-left: 4px solid;
         }
 
-        .recommendation-item:hover {
+        .recommendation-card:hover {
             background-color: rgba(0,123,255,0.05);
             transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         .recommendation-icon {
@@ -857,6 +953,98 @@ document.head.insertAdjacentHTML('beforeend', `
             padding: 10px;
             border-radius: 5px;
             background-color: rgba(0,0,0,0.02);
+        }
+
+        .ratio-item, .trend-item {
+            transition: all 0.2s ease;
+        }
+
+        .ratio-item:hover, .trend-item:hover {
+            background-color: rgba(0,0,0,0.05) !important;
+        }
+
+        .financial-status {
+            border: 2px solid;
+            border-color: var(--bs-success);
+        }
+
+        .financial-status .status-icon {
+            opacity: 0.8;
+        }
+
+        .trend-indicator {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255,255,255,0.8);
+        }
+
+        .stat-box {
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .action-summary {
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .action-summary:hover {
+            background-color: rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .table thead th {
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+        }
+
+        .badge {
+            font-size: 0.75em;
+        }
+
+        .progress {
+            border-radius: 10px;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            border-bottom: none;
+            font-weight: 600;
+        }
+
+        .bg-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+        }
+
+        .bg-success {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+        }
+
+        .bg-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%) !important;
+        }
+
+        .bg-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+        }
+
+        .bg-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #545b62 100%) !important;
         }
     </style>
 `);

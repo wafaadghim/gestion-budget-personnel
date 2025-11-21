@@ -208,7 +208,136 @@
     </div>
 </div>
 
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    
+    // Join notifications page room
+    socket.emit('join_notifications_page');
+    
+    // Listen for notifications updates
+    socket.on('notifications_update', function(data) {
+        console.log('Notifications update:', data);
+        
+        if (data.unread_notifications_count !== undefined) {
+            // Update unread count in the header
+            updateUnreadCount(data.unread_notifications_count);
+        }
+        
+        if (data.pending_invitations && data.pending_invitations.length > 0) {
+            // Update pending invitations section
+            updatePendingInvitations(data.pending_invitations);
+        }
+    });
+    
+    socket.on('new_invitation_received', function(data) {
+        console.log('New invitation received:', data);
+        showNotification(data.message, 'info');
+        // Refresh the page to show new invitation
+        setTimeout(() => location.reload(), 1000);
+    });
+    
+    socket.on('invitations_update', function(data) {
+        console.log('Invitations update:', data);
+        if (data.pending_count !== undefined) {
+            // Update pending invitations count
+            // This might require refreshing the page or updating the DOM
+            if (data.pending_count === 0) {
+                // If no more pending invitations, hide the section or refresh
+                const pendingSection = document.querySelector('.card-header:contains("Invitations en attente")');
+                if (pendingSection) {
+                    location.reload(); // Simple solution for now
+                }
+            }
+        }
+    });
+    
+    socket.on('group_member_joined', function(data) {
+        console.log('Group member joined:', data);
+        showNotification(data.message, 'success');
+        // Add to recent notifications
+        addRecentNotification(data.message, 'group_join');
+    });
+    
+    socket.on('new_group_expense', function(data) {
+        console.log('New group expense:', data);
+        showNotification(data.message, 'info');
+        // Add to recent notifications
+        addRecentNotification(data.message, 'group_expense');
+    });
+});
+
+function updateUnreadCount(count) {
+    const badge = document.querySelector('.notification-badge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function updatePendingInvitations(invitations) {
+    const pendingSection = document.querySelector('.card-body');
+    if (pendingSection && invitations.length > 0) {
+        // This would require more complex DOM manipulation
+        // For now, we'll just refresh the page
+        location.reload();
+    }
+}
+
+function addRecentNotification(message, type) {
+    const notificationsContainer = document.querySelector('.card-body');
+    if (notificationsContainer) {
+        const notificationHtml = `
+            <div class="notification-item mb-3 p-3 border rounded bg-light">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-${type === 'group_join' ? 'user-plus text-success' : 'euro-sign text-warning'} me-2"></i>
+                            <strong>${type === 'group_join' ? 'Nouveau membre dans le groupe' : 'Nouvelle dépense dans le groupe'}</strong>
+                        </div>
+                        <p class="mb-2 text-muted small">${message}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            À l'instant
+                        </small>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary">Nouveau</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insert at the beginning of the notifications list
+        notificationsContainer.insertAdjacentHTML('afterbegin', notificationHtml);
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-bell me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
 function markAllAsRead() {
     fetch('/mark_all_notifications_read', {
         method: 'POST',

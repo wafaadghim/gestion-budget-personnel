@@ -33,8 +33,7 @@
             
             <div class="mb-3">
                 <label for="date" class="form-label">Date</label>
-                <input type="date" class="form-control" id="date" name="date" 
-                       value="{{ expense.date.strftime('%Y-%m-%d') }}" required>
+                <input type="text" class="form-control" id="date" name="date" required>
             </div>
             
             <button type="submit" class="btn btn-primary">Modifier la dépense</button>
@@ -42,4 +41,15 @@
         </form>
     </div>
 </div>
+
+<script>
+// Initialiser Flatpickr pour le champ de date avec format jj/mm/aaaa
+flatpickr("#date", {
+    locale: "fr",
+    dateFormat: "d/m/Y",
+    defaultDate: "{{ expense.date.strftime('%d/%m/%Y') }}",
+    maxDate: new Date(),
+    allowInput: true
+});
+</script>
 {% endblock %}

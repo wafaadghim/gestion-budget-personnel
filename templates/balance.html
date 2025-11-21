@@ -100,47 +100,6 @@
     </div>
 </div>
 
-<!-- Tableau récapitulatif -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5>Récapitulatif mensuel détaillé</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Mois</th>
-                                <th>Revenus</th>
-                                <th>Dépenses</th>
-                                <th>Balance</th>
-                                <th>Épargne (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for data in monthly_data %}
-                            <tr>
-                                <td>{{ data.month }}</td>
-                                <td class="text-success">{{ "%.3f"|format(data.income) }} DT</td>
-                                <td class="text-danger">{{ "%.3f"|format(data.expenses) }} DT</td>
-                                <td class="{% if data.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {{ "%.3f"|format(data.balance) }} DT
-                                </td>
-                                <td>
-                                    {{ "%.1f"|format((data.balance / data.income * 100) if data.income > 0 else 0) }}%
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script>

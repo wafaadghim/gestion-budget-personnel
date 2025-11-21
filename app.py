@@ -128,7 +128,7 @@ def can_add_expense(user):
 # Catégories prédéfinies
 CATEGORIES = [
     'Alimentation', 'Transport', 'Logement', 'Loisirs', 
-    'Santé', 'Éducation', 'Shopping', 'Autres'
+    'Santé', 'Éducation', 'Shopping', 'Dépenses collectives', 'Autres'
 ]
 
 # Catégories de revenus
@@ -185,6 +185,15 @@ def dashboard():
     # Dernières dépenses
     recent_expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).limit(5).all()
     
+    # Calculer le total des dernières dépenses
+    recent_expenses_total = sum(exp.amount for exp in recent_expenses)
+    
+    # Derniers revenus
+    recent_incomes = Income.query.filter_by(user_id=current_user.id).order_by(Income.date.desc()).limit(5).all()
+    
+    # Calculer le total des derniers revenus
+    recent_incomes_total = sum(inc.amount for inc in recent_incomes)
+    
     # Invitations en attente
     pending_invitations = Invitation.query.filter_by(
         invited_user_id=current_user.id,
@@ -194,9 +203,13 @@ def dashboard():
     return render_template('dashboard.html', 
                          total_month=total_month,
                          total_month_income=total_month_income,
+                         total_month_expenses=total_month,
                          balance=balance,
                          expenses_by_category=expenses_by_category,
                          recent_expenses=recent_expenses,
+                         recent_expenses_total=recent_expenses_total,
+                         recent_incomes=recent_incomes,
+                         recent_incomes_total=recent_incomes_total,
                          pending_invitations=pending_invitations)
 
 # Inscription
@@ -546,7 +559,28 @@ def expenses():
         page=page, per_page=per_page, error_out=False
     )
     
-    return render_template('expenses.html', expenses=expenses, selected_category=category_filter)
+    # Calcul du total des dépenses du mois en cours
+    today = date.today()
+    month_expenses = Expense.query.filter(
+        Expense.user_id == current_user.id,
+        db.extract('month', Expense.date) == today.month,
+        db.extract('year', Expense.date) == today.year
+    ).all()
+    total_month_expenses = sum(exp.amount for exp in month_expenses)
+    
+    # Calcul des dépenses par catégorie pour le mois en cours
+    expenses_by_category = {}
+    for exp in month_expenses:
+        if exp.category in expenses_by_category:
+            expenses_by_category[exp.category] += exp.amount
+        else:
+            expenses_by_category[exp.category] = exp.amount
+    
+    return render_template('expenses.html', 
+                         expenses=expenses, 
+                         selected_category=category_filter,
+                         total_month_expenses=total_month_expenses,
+                         expenses_by_category=expenses_by_category)
 
 # Modifier une dépense
 @app.route('/edit_expense/<int:expense_id>', methods=['GET', 'POST'])
@@ -748,7 +782,14 @@ def incomes():
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
-    incomes = Income.query.filter_by(user_id=current_user.id).order_by(Income.date.desc()).paginate(
+    # Filtrage par catégorie si spécifié
+    category_filter = request.args.get('category')
+    query = Income.query.filter_by(user_id=current_user.id)
+    
+    if category_filter:
+        query = query.filter_by(category=category_filter)
+    
+    incomes = query.order_by(Income.date.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     
@@ -761,7 +802,7 @@ def incomes():
     ).all()
     total_month_income = sum(inc.amount for inc in month_incomes)
     
-    return render_template('incomes.html', incomes=incomes, total_month_income=total_month_income, income_categories=INCOME_CATEGORIES)
+    return render_template('incomes.html', incomes=incomes, total_month_income=total_month_income, income_categories=INCOME_CATEGORIES, selected_category=category_filter)
 
 # Ajouter un revenu
 @app.route('/add_income', methods=['GET', 'POST'])
@@ -998,10 +1039,24 @@ def groups():
         status='pending'
     ).join(Group).all()
 
+    # Calculer le total des dépenses de groupe pour l'utilisateur
+    # Obtenir tous les groupes où l'utilisateur est membre
+    user_group_ids = [group.id for group in created_groups] + [member.id for member in member_groups]
+    if user_group_ids:
+        total_group_expenses = db.session.query(db.func.sum(Expense.amount)).filter(
+            Expense.group_id.in_(user_group_ids),
+            Expense.user_id == current_user.id
+        ).scalar()
+        # S'assurer que c'est un float, pas None
+        total_group_expenses = float(total_group_expenses) if total_group_expenses is not None else 0.0
+    else:
+        total_group_expenses = 0.0
+
     return render_template('groups.html',
                          created_groups=created_groups,
                          member_groups=member_groups,
-                         pending_invitations=pending_invitations)
+                         pending_invitations=pending_invitations,
+                         total_group_expenses=total_group_expenses)
 
 # Créer un groupe
 @app.route('/create_group', methods=['GET', 'POST'])
@@ -1920,144 +1975,290 @@ def upload_proof():
 @login_required
 def advanced_reports():
     today = date.today()
-
-    # Données pour les graphiques
+    
+    # Récupération des paramètres de filtrage
+    period = request.args.get('period', 'current_year')
+    category_filter = request.args.get('category')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    
+    # Définition des dates selon la période sélectionnée
+    if period == 'current_year':
+        start_date = date(today.year, 1, 1)
+        end_date = date(today.year, 12, 31)
+        period_info = {
+            'label': f'Année {today.year}',
+            'start': f'{today.year}-01-01',
+            'end': f'{today.year}-12-31'
+        }
+    elif period == 'last_year':
+        start_date = date(today.year - 1, 1, 1)
+        end_date = date(today.year - 1, 12, 31)
+        period_info = {
+            'label': f'Année {today.year - 1}',
+            'start': f'{today.year - 1}-01-01',
+            'end': f'{today.year - 1}-12-31'
+        }
+    elif period == 'current_month':
+        start_date = date(today.year, today.month, 1)
+        if today.month == 12:
+            end_date = date(today.year, 12, 31)
+        else:
+            end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+        period_info = {
+            'label': f'{today.strftime("%B %Y").title()}',
+            'start': start_date.strftime('%Y-%m-%d'),
+            'end': end_date.strftime('%Y-%m-%d')
+        }
+    elif period == 'last_month':
+        if today.month == 1:
+            start_date = date(today.year - 1, 12, 1)
+            end_date = date(today.year - 1, 12, 31)
+        else:
+            start_date = date(today.year, today.month - 1, 1)
+            end_date = date(today.year, today.month, 1) - timedelta(days=1)
+        period_info = {
+            'label': f'{(start_date).strftime("%B %Y").title()}',
+            'start': start_date.strftime('%Y-%m-%d'),
+            'end': end_date.strftime('%Y-%m-%d')
+        }
+    elif period == 'custom' and date_from and date_to:
+        start_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+        end_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+        period_info = {
+            'label': f'Période personnalisée',
+            'start': date_from,
+            'end': date_to
+        }
+    else:
+        # Par défaut : année en cours
+        start_date = date(today.year, 1, 1)
+        end_date = date(today.year, 12, 31)
+        period_info = {
+            'label': f'Année {today.year}',
+            'start': f'{today.year}-01-01',
+            'end': f'{today.year}-12-31'
+        }
+    
+    # Filtrage des données selon la période et la catégorie
+    expenses_query = Expense.query.filter(
+        Expense.user_id == current_user.id,
+        Expense.date >= start_date,
+        Expense.date <= end_date
+    )
+    
+    incomes_query = Income.query.filter(
+        Income.user_id == current_user.id,
+        Income.date >= start_date,
+        Income.date <= end_date
+    )
+    
+    if category_filter:
+        expenses_query = expenses_query.filter_by(category=category_filter)
+    
+    expenses = expenses_query.all()
+    incomes = incomes_query.all()
+    
+    # Calcul des totaux
+    total_expenses = sum(exp.amount for exp in expenses)
+    total_income = sum(inc.amount for inc in incomes)
+    current_balance = total_income - total_expenses
+    
+    # Comptage des transactions
+    income_count = len(incomes)
+    expense_count = len(expenses)
+    
+    # Moyennes
+    avg_income = total_income / income_count if income_count > 0 else 0
+    avg_expense = total_expenses / expense_count if expense_count > 0 else 0
+    
+    # Calcul des données mensuelles pour les graphiques
     monthly_labels = []
     monthly_income = []
     monthly_expenses = []
-
-    # Derniers 6 mois
-    for i in range(5, -1, -1):
-        month = today.month - i
-        year = today.year
-        if month <= 0:
-            month += 12
-            year -= 1
-
-        month_inc = sum(inc.amount for inc in Income.query.filter(
-            Income.user_id == current_user.id,
-            db.extract('month', Income.date) == month,
-            db.extract('year', Income.date) == year
-        ).all())
-
-        month_exp = sum(exp.amount for exp in Expense.query.filter(
-            Expense.user_id == current_user.id,
-            db.extract('month', Expense.date) == month,
-            db.extract('year', Expense.date) == year
-        ).all())
-
-        monthly_labels.append(f"{month:02d}/{year}")
-        monthly_income.append(month_inc)
-        monthly_expenses.append(month_exp)
-
+    
+    # Générer les labels des mois pour la période
+    current_date = start_date
+    while current_date <= end_date:
+        month_labels = []
+        month_income = []
+        month_expenses = []
+        
+        temp_date = start_date
+        while temp_date <= end_date:
+            month_labels.append(f"{temp_date.strftime('%m/%Y')}")
+            
+            # Revenus pour ce mois
+            month_start = date(temp_date.year, temp_date.month, 1)
+            if temp_date.month == 12:
+                month_end = date(temp_date.year, 12, 31)
+            else:
+                month_end = date(temp_date.year, temp_date.month + 1, 1) - timedelta(days=1)
+            
+            month_inc = sum(inc.amount for inc in incomes 
+                          if month_start <= inc.date <= month_end)
+            month_exp = sum(exp.amount for exp in expenses 
+                          if month_start <= exp.date.date() <= month_end)
+            
+            month_income.append(month_inc)
+            month_expenses.append(month_exp)
+            
+            # Avancer d'un mois
+            if temp_date.month == 12:
+                temp_date = date(temp_date.year + 1, 1, 1)
+            else:
+                temp_date = date(temp_date.year, temp_date.month + 1, 1)
+        
+        monthly_labels = month_labels
+        monthly_income = month_income
+        monthly_expenses = month_expenses
+        break  # On ne fait qu'une passe
+    
     # Données par catégorie
-    all_expenses = Expense.query.filter_by(user_id=current_user.id).all()
     category_data = {}
     category_labels = []
     colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF']
-
-    for i, exp in enumerate(all_expenses):
+    
+    for exp in expenses:
         if exp.category in category_data:
             category_data[exp.category] += exp.amount
         else:
             category_data[exp.category] = exp.amount
             category_labels.append(exp.category)
-
+    
     category_values = list(category_data.values())
-
-    # Statistiques générales
-    total_income = sum(inc.amount for inc in Income.query.filter(
-        Income.user_id == current_user.id,
-        db.extract('month', Income.date) == today.month,
-        db.extract('year', Income.date) == today.year
-    ).all())
-
-    total_expenses = sum(exp.amount for exp in Expense.query.filter(
+    
+    # Calcul des tendances réelles (comparaison avec la période précédente)
+    # Période précédente de même durée
+    period_days = (end_date - start_date).days + 1
+    prev_end_date = start_date - timedelta(days=1)
+    prev_start_date = prev_end_date - timedelta(days=period_days - 1)
+    
+    prev_expenses = Expense.query.filter(
         Expense.user_id == current_user.id,
-        db.extract('month', Expense.date) == today.month,
-        db.extract('year', Expense.date) == today.year
-    ).all())
-
-    # Comptage des transactions
-    income_count = Income.query.filter(
+        Expense.date >= prev_start_date,
+        Expense.date <= prev_end_date
+    ).all()
+    
+    prev_incomes = Income.query.filter(
         Income.user_id == current_user.id,
-        db.extract('month', Income.date) == today.month,
-        db.extract('year', Income.date) == today.year
-    ).count()
-
-    expense_count = Expense.query.filter(
-        Expense.user_id == current_user.id,
-        db.extract('month', Expense.date) == today.month,
-        db.extract('year', Expense.date) == today.year
-    ).count()
-
-    # Moyennes
-    avg_income = total_income / income_count if income_count > 0 else 0
-    avg_expense = total_expenses / expense_count if expense_count > 0 else 0
-
-    current_balance = total_income - total_expenses
-
-    # Croissances (simulées pour l'instant)
-    income_growth = 5.2
-    expense_growth = -2.1
+        Income.date >= prev_start_date,
+        Income.date <= prev_end_date
+    ).all()
+    
+    prev_total_expenses = sum(exp.amount for exp in prev_expenses)
+    prev_total_income = sum(inc.amount for inc in prev_incomes)
+    
+    # Calcul des croissances réelles
+    if prev_total_income > 0:
+        income_growth = ((total_income - prev_total_income) / prev_total_income) * 100
+    else:
+        income_growth = 0 if total_income == 0 else 100
+    
+    if prev_total_expenses > 0:
+        expense_growth = ((total_expenses - prev_total_expenses) / prev_total_expenses) * 100
+    else:
+        expense_growth = 0 if total_expenses == 0 else 100
+    
+    # Taux d'épargne
     savings_rate = ((total_income - total_expenses) / total_income * 100) if total_income > 0 else 0
     balance_percentage = (current_balance / total_income * 100) if total_income > 0 else 0
-
-    # Analyse par catégories
+    
+    # Analyse par catégories avec tendances réelles
     category_analysis = []
     for i, (cat, amount) in enumerate(category_data.items()):
+        # Calcul de la tendance pour cette catégorie
+        prev_cat_expenses = sum(exp.amount for exp in prev_expenses if exp.category == cat)
+        if prev_cat_expenses > 0:
+            cat_trend = ((amount - prev_cat_expenses) / prev_cat_expenses) * 100
+        else:
+            cat_trend = 0 if amount == 0 else 100
+        
+        # Moyenne mensuelle
+        months_in_period = len(monthly_labels) if monthly_labels else 1
+        monthly_avg = amount / months_in_period
+        
         category_analysis.append({
             'name': cat,
             'total': amount,
             'percentage': (amount / total_expenses * 100) if total_expenses > 0 else 0,
-            'trend': 2.5,  # Simulé
-            'monthly_avg': amount / 6,  # Simulé sur 6 mois
+            'trend': cat_trend,
+            'monthly_avg': monthly_avg,
             'color': colors[i % len(colors)],
-            'icon': 'utensils' if cat == 'Alimentation' else 'car' if cat == 'Transport' else 'home' if cat == 'Logement' else 'gamepad'
+            'icon': 'utensils' if cat == 'Alimentation' else 'car' if cat == 'Transport' else 'home' if cat == 'Logement' else 'users' if cat == 'Dépenses collectives' else 'gamepad'
         })
-
-    # Tendances
+    
+    # Trier par montant décroissant
+    category_analysis.sort(key=lambda x: x['total'], reverse=True)
+    
+    # Tendances pour les graphiques
     trend_labels = monthly_labels
     trend_data = monthly_expenses
-
-    # Recommandations
-    recommendations = [
-        {
-            'title': 'Réduire les dépenses alimentaires',
-            'description': 'Vos dépenses alimentaires représentent 35% de vos dépenses totales.',
-            'impact': 'Économie potentielle: 150dt/mois',
-            'type': 'warning',
-            'icon': 'exclamation-triangle'
-        },
-        {
+    
+    # Recommandations basées sur les données réelles
+    recommendations = []
+    
+    # Recommandation sur l'épargne
+    if savings_rate < 20:
+        impact = f"Économie potentielle: {((total_income * 0.20) - (total_income - total_expenses)):.3f} DT/mois"
+        recommendations.append({
             'title': 'Augmenter le taux d\'épargne',
-            'description': 'Votre taux d\'épargne actuel est de 15%. L\'objectif recommandé est de 20%.',
-            'impact': 'Économie supplémentaire: 50dt/mois',
-            'type': 'info',
+            'description': f'Votre taux d\'épargne actuel est de {savings_rate:.1f}%. L\'objectif recommandé est de 20%.',
+            'impact': impact,
+            'type': 'warning',
             'icon': 'piggy-bank'
-        }
-    ]
-
-    # Comparaisons
-    income_comparison = 8.5  # Simulé
-    expense_comparison = -3.2  # Simulé
-
-    # Objectifs d'épargne (simulés)
+        })
+    
+    # Recommandation sur les catégories dominantes
+    if category_analysis:
+        max_category = max(category_analysis, key=lambda x: x['percentage'])
+        if max_category['percentage'] > 35:
+            recommendations.append({
+                'title': f'Réduire les dépenses {max_category["name"].lower()}',
+                'description': f'Vos dépenses {max_category["name"].lower()} représentent {max_category["percentage"]:.1f}% de vos dépenses totales.',
+                'impact': f'Économie potentielle: {max_category["total"] * 0.1:.3f} DT/mois',
+                'type': 'warning',
+                'icon': 'exclamation-triangle'
+            })
+    
+    # Recommandation sur les tendances négatives
+    negative_trends = [cat for cat in category_analysis if cat['trend'] > 10]
+    if negative_trends:
+        worst_trend = max(negative_trends, key=lambda x: x['trend'])
+        recommendations.append({
+            'title': f'Surveiller l\'évolution de {worst_trend["name"].lower()}',
+            'description': f'Vos dépenses {worst_trend["name"].lower()} ont augmenté de {worst_trend["trend"]:.1f}% par rapport à la période précédente.',
+            'impact': 'Réduire cette tendance pour améliorer votre budget',
+            'type': 'info',
+            'icon': 'chart-line'
+        })
+    
+    # Si pas de recommandations spécifiques, ajouter une positive
+    if not recommendations and savings_rate >= 20:
+        recommendations.append({
+            'title': 'Excellente gestion budgétaire !',
+            'description': f'Votre taux d\'épargne de {savings_rate:.1f}% est excellent. Continuez ainsi !',
+            'impact': 'Vos finances sont bien équilibrées',
+            'type': 'success',
+            'icon': 'thumbs-up'
+        })
+    
+    # Comparaisons (simulées pour l'instant - pourraient être calculées avec plus de données historiques)
+    income_comparison = income_growth
+    expense_comparison = expense_growth
+    
+    # Objectifs d'épargne (simulés - pourraient être personnalisés)
     savings_goals = [
-        {'name': 'Voyage d\'été', 'current': 450, 'target': 1200, 'progress': 37.5},
-        {'name': 'Fonds d\'urgence', 'current': 2500, 'target': 5000, 'progress': 50}
+        {'name': 'Fonds d\'urgence', 'current': total_income * 0.1, 'target': total_income * 0.2, 'progress': (total_income * 0.1 / (total_income * 0.2)) * 100 if total_income > 0 else 0},
+        {'name': 'Épargne annuelle', 'current': current_balance, 'target': total_income * 0.3, 'progress': (current_balance / (total_income * 0.3)) * 100 if total_income > 0 else 0}
     ]
-
+    
     # Catégories pour les filtres
-    categories = list(set(exp.category for exp in all_expenses))
-
-    # Groupes de l'utilisateur
-    user_groups = GroupMember.query.filter_by(
-        user_id=current_user.id,
-        is_active=True
-    ).join(Group).all()
-
+    categories = list(set(exp.category for exp in expenses))
+    
     return render_template('advanced_reports.html',
+                         period_info=period_info,
+                         current_period=period,
                          monthly_labels=monthly_labels,
                          monthly_income=monthly_income,
                          monthly_expenses=monthly_expenses,
@@ -2082,8 +2283,7 @@ def advanced_reports():
                          income_comparison=income_comparison,
                          expense_comparison=expense_comparison,
                          savings_goals=savings_goals,
-                         categories=categories,
-                         user_groups=user_groups)
+                         categories=categories)
 
 # Paramètres
 @app.route('/settings')

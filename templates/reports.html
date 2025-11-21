@@ -5,6 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Rapports et Statistiques</h1>
+    <div class="text-muted">
+        <small>Mois en cours</small>
+    </div>
 </div>
 
 <div class="row">
@@ -12,7 +15,7 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5>Dépenses par mois</h5>
+                <h5>Dépenses du mois en cours</h5>
             </div>
             <div class="card-body">
                 <canvas id="monthlyChart" width="400" height="200"></canvas>
@@ -24,7 +27,7 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5>Répartition par catégorie</h5>
+                <h5>Répartition par catégorie (mois en cours)</h5>
             </div>
             <div class="card-body">
                 <div style="width: 100%; height: 350px; max-width: 500px; margin: 0 auto;">
@@ -40,7 +43,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5>Détails des dépenses</h5>
+                <h5>Détails des dépenses du mois en cours</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -92,11 +95,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 datalabels: {
                     color: '#2563eb',
                     font: {
-                        size: 12,
+                        size: 11,
                         weight: 'bold'
                     },
-                    formatter: function(value) {
-                        return value.toFixed(1) + ' DT';
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                        return value.toFixed(1) + ' DT\n(' + percentage + '%)';
                     },
                     anchor: 'end',
                     align: 'top',
@@ -136,19 +141,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 datalabels: {
                     color: '#ffffff',
                     font: {
-                        size: 14,
+                        size: 12,
                         weight: 'bold'
                     },
                     formatter: function(value, context) {
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const percentage = ((value / total) * 100).toFixed(1);
-                        return percentage + '%';
+                        return value.toFixed(1) + ' DT\n(' + percentage + '%)';
                     },
                     anchor: 'center',
-                    align: 'center'
+                    align: 'center',
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
                 },
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed.toFixed(1) + ' DT (' + percentage + '%)';
+                        }
+                    }
                 }
             }
         }

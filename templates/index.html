@@ -132,6 +132,34 @@
     bottom: 0;
     background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M20 20c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10zm10 0c0-5.5-4.5-10-10-10s-10 4.5-10 10 4.5 10 10 10 10-4.5 10-10z'/%3E%3C/g%3E%3C/svg%3E") repeat;
 }
+
+.custom-start-btn {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.custom-start-btn:hover {
+    background-color: #6f42c1 !important;
+    border-color: #6f42c1 !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(111, 66, 193, 0.3);
+}
+
+.custom-login-btn {
+    background-color: #6f42c1 !important;
+    border-color: #6f42c1 !important;
+    color: #fff !important;
+}
+
+.custom-login-btn:hover {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+}
 </style>
 
 <!-- Hero Section -->
@@ -155,10 +183,10 @@
                     </p>
 
                     <div class="d-flex justify-content-center gap-4 mb-5">
-                        <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg px-5 py-3 fw-bold shadow-lg">
+                        <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg px-5 py-3 fw-bold shadow-lg custom-start-btn">
                             <i class="fas fa-rocket me-2"></i>Commencer Gratuitement
                         </a>
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-5 py-3 fw-bold">
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-5 py-3 fw-bold custom-login-btn">
                             <i class="fas fa-sign-in-alt me-2"></i>Se Connecter
                         </a>
                     </div>

@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion Annuelle - Gestion des Dépenses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-chart-line me-2"></i>Gestion Annuelle
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-home me-2"></i>Retour au tableau de bord
+        </a>
+    </div>
+</div>
+
+<!-- Contrôles de filtrage -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="fas fa-filter me-2"></i>Filtres et Analyse
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="periodFilter" class="form-label">Période</label>
+                        <select class="form-select" id="periodFilter">
+                            <option value="current_month">Mois en cours</option>
+                            <option value="last_month">Mois dernier</option>
+                            <option value="current_year">Année en cours</option>
+                            <option value="custom">Période personnalisée</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="startDateContainer" style="display: none;">
+                        <label for="startDate" class="form-label">Date début</label>
+                        <input type="text" class="form-control" id="startDate" placeholder="jj/mm/aaaa">
+                    </div>
+                    <div class="col-md-3" id="endDateContainer" style="display: none;">
+                        <label for="endDate" class="form-label">Date fin</label>
+                        <input type="text" class="form-control" id="endDate" placeholder="jj/mm/aaaa">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="categoryFilter" class="form-label">Catégorie</label>
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">Toutes les catégories</option>
+                            {% for category in all_categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="typeFilter" class="form-label">Type</label>
+                        <select class="form-select" id="typeFilter">
+                            <option value="all">Tous</option>
+                            <option value="income">Revenus seulement</option>
+                            <option value="expense">Dépenses seulement</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary" id="applyFilters">
+                            <i class="fas fa-search me-2"></i>Appliquer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Résumé annuel adaptatif -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>Résumé {{ current_year }}
+                </h5>
+                <div class="stats-summary">
+                    <small class="text-muted">
+                        <i class="fas fa-chart-line me-1"></i>
+                        {{ active_months }} mois d'activité
+                        {% if savings_rate_year > 0 %}
+                            <span class="badge bg-success ms-2">{{ "%.1f"|format(savings_rate_year) }}% d'épargne</span>
+                        {% elif savings_rate_year < 0 %}
+                            <span class="badge bg-danger ms-2">{{ "%.1f"|format(savings_rate_year) }}% déficit</span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if annual_data %}
+                <!-- Statistiques supplémentaires -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-coins fa-2x text-success mb-2"></i>
+                                <h6 class="card-title">Revenus totaux</h6>
+                                <h4 class="text-success">{{ "%.3f"|format(total_year_income) }} DT</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-shopping-cart fa-2x text-danger mb-2"></i>
+                                <h6 class="card-title">Dépenses totales</h6>
+                                <h4 class="text-danger">{{ "%.3f"|format(total_year_expenses) }} DT</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-balance-scale fa-2x text-info mb-2"></i>
+                                <h6 class="card-title">Balance annuelle</h6>
+                                <h4 class="{% if year_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ "%.3f"|format(year_balance) }} DT
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-percentage fa-2x text-warning mb-2"></i>
+                                <h6 class="card-title">Taux d'épargne</h6>
+                                <h4 class="{% if savings_rate_year >= 20 %}text-success{% elif savings_rate_year >= 0 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(savings_rate_year) }}%
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Mois</th>
+                                <th class="text-end">Revenus</th>
+                                <th class="text-end">Dépenses</th>
+                                <th class="text-end">Balance</th>
+                                <th class="text-center">Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month_data in annual_data %}
+                            <tr class="{% if month_data.is_current %}table-primary{% elif not month_data.has_data %}table-light{% endif %}">
+                                <td>
+                                    <strong>{{ month_data.month_name }}</strong>
+                                    {% if month_data.is_current %}
+                                    <span class="badge bg-primary ms-2">En cours</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if month_data.income > 0 %}
+                                        <span class="text-success fw-bold">{{ "%.3f"|format(month_data.income) }} DT</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if month_data.expenses > 0 %}
+                                        <span class="text-danger fw-bold">{{ "%.3f"|format(month_data.expenses) }} DT</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if month_data.balance != 0 %}
+                                        <span class="{% if month_data.balance >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                            {{ "%.3f"|format(month_data.balance) }} DT
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if month_data.has_data %}
+                                        <i class="fas fa-check-circle text-success" title="Données disponibles"></i>
+                                    {% elif month_data.is_current %}
+                                        <i class="fas fa-clock text-info" title="Mois en cours"></i>
+                                    {% else %}
+                                        <i class="fas fa-minus-circle text-muted" title="Aucune donnée"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <th>Total {{ current_year }}</th>
+                                <th class="text-end text-success">
+                                    {{ "%.3f"|format(total_year_income) }} DT
+                                </th>
+                                <th class="text-end text-danger">
+                                    {{ "%.3f"|format(total_year_expenses) }} DT
+                                </th>
+                                <th class="text-end">
+                                    <span class="{% if year_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ "%.3f"|format(year_balance) }} DT
+                                    </span>
+                                </th>
+                                <th class="text-center">
+                                    <i class="fas fa-calculator text-light"></i>
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucune donnée disponible pour {{ current_year }}</h5>
+                    <p class="text-muted">Commencez à ajouter des revenus et dépenses pour voir votre résumé annuel.</p>
+                    <a href="{{ url_for('add_income') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i>Ajouter un revenu
+                    </a>
+                    <a href="{{ url_for('add_expense') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>Ajouter une dépense
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser Flatpickr pour les champs de date avec le format jj/mm/aaaa
+    flatpickr("#startDate", {
+        dateFormat: "d/m/Y",
+        locale: "fr"
+    });
+    
+    flatpickr("#endDate", {
+        dateFormat: "d/m/Y",
+        locale: "fr"
+    });
+
+    // Gestionnaire pour le changement de période
+    document.getElementById('periodFilter').addEventListener('change', function() {
+        const period = this.value;
+        const startDateContainer = document.getElementById('startDateContainer');
+        const endDateContainer = document.getElementById('endDateContainer');
+
+        if (period === 'custom') {
+            startDateContainer.style.display = 'block';
+            endDateContainer.style.display = 'block';
+        } else {
+            startDateContainer.style.display = 'none';
+            endDateContainer.style.display = 'none';
+        }
+    });
+
+    // Fonction pour appliquer les filtres
+    function applyFilters() {
+        const period = document.getElementById('periodFilter').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const category = document.getElementById('categoryFilter').value;
+        const type = document.getElementById('typeFilter').value;
+
+        // Validation pour la période personnalisée
+        if (period === 'custom') {
+            if (!startDate || !endDate) {
+                alert('Veuillez saisir les dates de début et de fin pour la période personnalisée.');
+                return;
+            }
+            
+            // Convertir les dates du format jj/mm/aaaa au format yyyy-mm-dd pour l'API
+            const startParts = startDate.split('/');
+            const endParts = endDate.split('/');
+            const startDateISO = `${startParts[2]}-${startParts[1].padStart(2, '0')}-${startParts[0].padStart(2, '0')}`;
+            const endDateISO = `${endParts[2]}-${endParts[1].padStart(2, '0')}-${endParts[0].padStart(2, '0')}`;
+            
+            // Validation des dates
+            if (new Date(startDateISO) > new Date(endDateISO)) {
+                alert('La date de début ne peut pas être supérieure à la date de fin.');
+                return;
+            }
+            
+            url += '&start_date=' + startDateISO + '&end_date=' + endDateISO;
+        }
+
+        // Construire l'URL pour l'API
+        let url = '/api/dashboard_data?period=' + period + '&type=' + type;
+        if (category) url += '&category=' + encodeURIComponent(category);
+        if (period === 'custom' && startDate && endDate) {
+            // Les dates sont déjà converties en format ISO ci-dessus
+            const startParts = startDate.split('/');
+            const endParts = endDate.split('/');
+            const startDateISO = `${startParts[2]}-${startParts[1].padStart(2, '0')}-${startParts[0].padStart(2, '0')}`;
+            const endDateISO = `${endParts[2]}-${endParts[1].padStart(2, '0')}-${endParts[0].padStart(2, '0')}`;
+            url += '&start_date=' + startDateISO + '&end_date=' + endDateISO;
+        }
+
+        // Afficher un indicateur de chargement
+        const applyButton = document.getElementById('applyFilters');
+        const originalText = applyButton.innerHTML;
+        applyButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+        applyButton.disabled = true;
+
+        // Faire la requête AJAX
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Afficher la période actuelle
+                document.getElementById('currentPeriodDisplay').textContent = data.period.label;
+            })
+            .catch(error => {
+                console.error('Erreur lors du filtrage:', error);
+                alert('Erreur lors de l\'application des filtres. Veuillez réessayer.');
+            })
+            .finally(() => {
+                // Restaurer le bouton
+                applyButton.innerHTML = originalText;
+                applyButton.disabled = false;
+            });
+    }
+
+    // Gestionnaire pour le bouton "Appliquer"
+    document.getElementById('applyFilters').addEventListener('click', applyFilters);
+});
+</script>
+{% endblock %}

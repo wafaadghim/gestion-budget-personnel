@@ -4,104 +4,201 @@
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Mes Dépenses{% if selected_category %} - Catégorie: {{ selected_category }}{% endif %}</h1>
+    <h1 class="h2">Mes Dépenses</h1>
     <a href="{{ url_for('add_expense') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Nouvelle dépense
     </a>
 </div>
 
-<!-- Filtre par catégorie -->
-<div class="row mb-3">
+<!-- Total du mois -->
+<div class="row mb-4">
     <div class="col-md-4">
-        <form method="GET" class="d-flex">
-            <select name="category" class="form-select me-2" onchange="this.form.submit()">
-                <option value="">Toutes les catégories</option>
-                {% for cat in ['Alimentation', 'Transport', 'Logement', 'Loisirs', 'Santé', 'Éducation', 'Vêtements', 'Autres'] %}
-                    <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
-                {% endfor %}
-            </select>
-            {% if selected_category %}
-                <a href="{{ url_for('expenses') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times"></i> Effacer
-                </a>
-            {% endif %}
-        </form>
+        <div class="stats-card">
+            <div class="stats-icon" style="background-color: #fee2e2; color: #dc2626;">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <div class="stats-value" id="total-month-expenses" style="color: #dc2626;">{{ "%.3f"|format(total_month_expenses) }} DT</div>
+            <div class="stats-label">Total dépenses du mois</div>
+        </div>
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Montant</th>
-                <th>Catégorie</th>
-                <th>Description</th>
-                <th>Tags</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for expense in expenses.items %}
-            <tr>
-                <td>{{ expense.date.strftime('%d/%m/%Y') }}</td>
-                <td>{{ "%.3f"|format(expense.amount) }} DT</td>
-                <td>
-                    <span class="badge sober">{{ expense.category }}</span>
-                </td>
-                <td>{{ expense.description|default('', true) }}</td>
-                <td>
-                    {% if expense.tags %}
-                        {% for tag in expense.tags.split(',') %}
-                            <span class="badge sober me-1">{{ tag.strip() }}</span>
+<!-- Filtre par catégorie -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>Filtrer par catégorie
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="d-flex gap-2">
+                    <select name="category" class="form-select" style="max-width: 200px;">
+                        <option value="">Toutes les catégories</option>
+                        {% for cat in ['Alimentation', 'Transport', 'Logement', 'Loisirs', 'Santé', 'Éducation', 'Shopping', 'Dépenses collectives', 'Autres'] %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
                         {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-search"></i> Filtrer
+                    </button>
+                    {% if selected_category %}
+                    <a href="{{ url_for('expenses') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Effacer
+                    </a>
                     {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    <a href="{{ url_for('delete_expense', expense_id=expense.id) }}" class="btn btn-sm btn-outline-danger" 
-                       onclick="return confirm('Supprimer cette dépense ?')">
-                        <i class="fas fa-trash"></i>
-                    </a>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="7" class="text-center">Aucune dépense enregistrée.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Pagination -->
-{% if expenses.pages > 1 %}
-<nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
-        {% if expenses.has_prev %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('expenses', page=expenses.prev_num, category=selected_category) }}">Précédent</a>
-            </li>
-        {% endif %}
-        
-        {% for page_num in expenses.iter_pages() %}
-            {% if page_num %}
-                <li class="page-item {% if page_num == expenses.page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('expenses', page=page_num, category=selected_category) }}">{{ page_num }}</a>
-                </li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-            {% endif %}
-        {% endfor %}
-        
-        {% if expenses.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('expenses', page=expenses.next_num, category=selected_category) }}">Suivant</a>
-            </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+<!-- Liste des dépenses -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Mes Dépenses
+                    {% if selected_category %}
+                    <span class="badge bg-primary ms-2">{{ selected_category }}</span>
+                    {% endif %}
+                </h5>
+                <span class="text-muted">{{ expenses.total }} dépense(s)</span>
+            </div>
+            <div class="card-body">
+                {% if expenses.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Catégorie</th>
+                                <th>Description</th>
+                                <th class="text-end">Montant</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in expenses.items %}
+                            <tr>
+                                <td>{{ expense.date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge sober">{{ expense.category }}</span>
+                                </td>
+                                <td>{{ expense.description }}</td>
+                                <td class="text-end">
+                                    <strong class="text-danger">{{ "%.3f"|format(expense.amount) }} DT</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteExpense({{ expense.id }})"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if expenses.pages > 1 %}
+                <nav aria-label="Navigation des dépenses" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if expenses.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('expenses', page=expenses.prev_num, category=selected_category) }}">
+                                <i class="fas fa-chevron-left"></i> Précédent
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-left"></i> Précédent</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in expenses.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == expenses.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('expenses', page=page_num, category=selected_category) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if expenses.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('expenses', page=expenses.next_num, category=selected_category) }}">
+                                Suivant <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Suivant <i class="fas fa-chevron-right"></i></span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucune dépense trouvée</h5>
+                    <p class="text-muted">
+                        {% if selected_category %}
+                        Aucune dépense dans la catégorie "{{ selected_category }}".
+                        {% else %}
+                        Vous n'avez encore ajouté aucune dépense.
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('add_expense') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Ajouter ma première dépense
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteExpense(expenseId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette dépense ? Cette action est irréversible.')) {
+        fetch(`/delete_expense/${expenseId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la suppression de la dépense.');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression de la dépense.');
+        });
+    }
+}
+</script>
 {% endblock %}

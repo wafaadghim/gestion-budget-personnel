@@ -21,14 +21,13 @@ class User(UserMixin, db.Model):
     
     # Relations
     expenses = db.relationship('Expense', backref='user', lazy=True)
-    budgets = db.relationship('Budget', backref='user', lazy=True)
     incomes = db.relationship('Income', backref='user', lazy=True)
     groups_created = db.relationship('Group', backref='creator', lazy=True)
     group_memberships = db.relationship('GroupMember', backref='user', lazy=True)
     invitations_sent = db.relationship('Invitation', foreign_keys='Invitation.sender_id', backref='sender', lazy=True)
     invitations_received = db.relationship('Invitation', foreign_keys='Invitation.invited_user_id', backref='invited_user', lazy=True)
-    notifications = db.relationship('Notification', foreign_keys='Notification.user_id', backref='recipient', lazy=True)
-    triggered_notifications = db.relationship('Notification', foreign_keys='Notification.related_user_id', backref='trigger_user', lazy=True)
+    notifications = db.relationship('Notification', foreign_keys='Notification.user_id', backref='recipient', lazy=True, overlaps="recipient,trigger_user")
+    triggered_notifications = db.relationship('Notification', foreign_keys='Notification.related_user_id', backref='trigger_user', lazy=True, overlaps="trigger_user,recipient")
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -122,15 +121,6 @@ class Expense(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
     justificatif = db.Column(db.String(255), nullable=True)  # Chemin vers le fichier justificatif (image/PDF)
 
-class Budget(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(100), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    month = db.Column(db.Integer, nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 class Income(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
@@ -139,6 +129,18 @@ class Income(db.Model):
     date = db.Column(db.Date, nullable=False, default=date.today)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Budget(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relation unique par utilisateur, catégorie, mois et année
+    __table_args__ = (db.UniqueConstraint('user_id', 'category', 'month', 'year', name='unique_user_category_budget'),)
 
 class Invitation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -167,7 +169,7 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relations
-    user = db.relationship('User', foreign_keys=[user_id])
+    user = db.relationship('User', foreign_keys=[user_id], overlaps="notifications,recipient")
     group = db.relationship('Group', backref='notifications')
-    related_user = db.relationship('User', foreign_keys=[related_user_id])
+    related_user = db.relationship('User', foreign_keys=[related_user_id], overlaps="trigger_user,triggered_notifications")
     expense = db.relationship('Expense', backref='notifications')

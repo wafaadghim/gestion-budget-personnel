@@ -130,40 +130,142 @@
 
 <!-- Statistiques rapides -->
 <div class="row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-3 mb-3">
         <div class="stats-card text-center">
             <div class="stats-icon">
                 <i class="fas fa-users"></i>
             </div>
-            <div class="stats-value">{{ created_groups|length + member_groups|length }}</div>
+            <div class="stats-value">{{ member_groups|length }}</div>
             <div class="stats-label">Groupes totaux</div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-3 mb-3">
         <div class="stats-card text-center">
             <div class="stats-icon" style="background-color: #fefce8; color: #d97706;">
                 <i class="fas fa-envelope"></i>
             </div>
             <div class="stats-value" style="color: #d97706;">{{ pending_invitations|length }}</div>
-            <div class="stats-label">Invitations en attente</div>
+            <div class="stats-label">Invitations reçues</div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-3 mb-3">
         <div class="stats-card text-center">
             <div class="stats-icon" style="background-color: #dbeafe; color: #2563eb;">
+                <i class="fas fa-paper-plane"></i>
+            </div>
+            <div class="stats-value" id="sent-invitations-count" style="color: #2563eb;">{{ sent_invitations_count }}</div>
+            <div class="stats-label">Invitations envoyées</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card text-center">
+            <div class="stats-icon" style="background-color: #fee2e2; color: #dc2626;">
                 <i class="fas fa-euro-sign"></i>
             </div>
-            <div class="stats-value" style="color: #2563eb;">
-                {% set total_expenses = 0 %}
-                {% for group in created_groups + member_groups %}
-                    {% for expense in group.expenses %}
-                        {% set total_expenses = total_expenses + expense.amount %}
-                    {% endfor %}
-                {% endfor %}
-                {{ "%.3f"|format(total_expenses) }}
+            <div class="stats-value" id="total-group-expenses" style="color: #dc2626;">
+                {{ "%.3f"|format(total_group_expenses) }}
             </div>
             <div class="stats-label">DT dépensés en groupe</div>
         </div>
     </div>
 </div>
 {% endblock %}
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    
+    // Join groups page room
+    socket.emit('join_groups_page');
+    
+    // Listen for real-time updates
+    socket.on('groups_stats_update', function(data) {
+        console.log('Received groups stats update:', data);
+        
+        if (data.created_groups_count !== undefined) {
+            // Update created groups count if needed
+            // This would require additional logic to update the displayed count
+        }
+        
+        if (data.total_groups_count !== undefined) {
+            // Update total groups count
+            const totalGroupsElement = document.querySelector('.stats-card .stats-value');
+            if (totalGroupsElement && totalGroupsElement.nextElementSibling.textContent.includes('Groupes totaux')) {
+                totalGroupsElement.textContent = data.total_groups_count;
+            }
+        }
+        
+        if (data.sent_invitations_count !== undefined) {
+            // Update sent invitations count
+            const sentInvitationsElement = document.getElementById('sent-invitations-count');
+            if (sentInvitationsElement) {
+                sentInvitationsElement.textContent = data.sent_invitations_count;
+            }
+        }
+        
+        if (data.total_group_expenses !== undefined) {
+            // Update total group expenses
+            const totalExpensesElement = document.getElementById('total-group-expenses');
+            if (totalExpensesElement) {
+                totalExpensesElement.textContent = data.total_group_expenses.toFixed(3) + ' DT';
+            }
+        }
+    });
+    
+    // Listen for invitation updates
+    socket.on('new_invitation_received', function(data) {
+        console.log('New invitation received:', data);
+        // Update pending invitations count in the stats
+        const pendingInvitationsElement = document.querySelector('.stats-card .stats-value');
+        if (pendingInvitationsElement && pendingInvitationsElement.nextElementSibling.textContent.includes('Invitations reçues')) {
+            const currentCount = parseInt(pendingInvitationsElement.textContent) || 0;
+            pendingInvitationsElement.textContent = currentCount + 1;
+        }
+        
+        // Show a notification or update the pending invitations section
+        showNotification('Nouvelle invitation reçue !', 'info');
+    });
+    
+    socket.on('invitations_update', function(data) {
+        console.log('Invitations update:', data);
+        if (data.pending_count !== undefined) {
+            // Update pending invitations count
+            const pendingInvitationsElement = document.querySelector('.stats-card .stats-value');
+            if (pendingInvitationsElement && pendingInvitationsElement.nextElementSibling.textContent.includes('Invitations reçues')) {
+                pendingInvitationsElement.textContent = data.pending_count;
+            }
+        }
+    });
+    
+    socket.on('group_member_joined', function(data) {
+        console.log('Group member joined:', data);
+        showNotification(data.message, 'success');
+    });
+    
+    socket.on('new_group_expense', function(data) {
+        console.log('New group expense:', data);
+        showNotification(data.message, 'info');
+    });
+});
+
+function showNotification(message, type = 'info') {
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-bell me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>

@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Revenus - Gestion des Ressources{% endblock %}
+{% block title %}Mes Revenus - Gestion des Ressources{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Mes Revenus</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('add_income') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Ajouter un revenu
-        </a>
-    </div>
+    <a href="{{ url_for('add_income') }}" class="btn btn-success">
+        <i class="fas fa-plus"></i> Nouveau revenu
+    </a>
 </div>
 
 <!-- Total du mois -->
@@ -19,82 +17,188 @@
             <div class="stats-icon" style="background-color: #dbeafe; color: #2563eb;">
                 <i class="fas fa-coins"></i>
             </div>
-            <div class="stats-value" style="color: #2563eb;">{{ "%.3f"|format(total_month_income) }} DT</div>
+            <div class="stats-value" id="total-month-income" style="color: #2563eb;">{{ "%.3f"|format(total_month_income) }} DT</div>
             <div class="stats-label">Total revenus du mois</div>
         </div>
     </div>
 </div>
 
-<!-- Tableau des revenus -->
-<div class="card">
-    <div class="card-header">
-        <h5>Historique des revenus</h5>
-    </div>
-    <div class="card-body">
-        {% if incomes.items %}
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Catégorie</th>
-                            <th>Description</th>
-                            <th>Montant</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for income in incomes.items %}
-                        <tr>
-                            <td>{{ income.date.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ income.category }}</td>
-                            <td>{{ income.description or '-' }}</td>
-                            <td><strong>{{ "%.3f"|format(income.amount) }} DT</strong></td>
-                            <td>
-                                <a href="{{ url_for('edit_income', income_id=income.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-edit"></i> Modifier
-                                </a>
-                                <a href="{{ url_for('delete_income', income_id=income.id) }}" 
-                                   class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce revenu ?')">
-                                    <i class="fas fa-trash"></i> Supprimer
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<!-- Filtre par catégorie -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>Filtrer par catégorie
+                </h5>
             </div>
-            
-            <!-- Pagination -->
-            <nav aria-label="Navigation des revenus">
-                <ul class="pagination justify-content-center">
-                    {% if incomes.has_prev %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('incomes', page=incomes.prev_num) }}">Précédent</a>
-                        </li>
+            <div class="card-body">
+                <form method="GET" class="d-flex gap-2">
+                    <select name="category" class="form-select" style="max-width: 200px;">
+                        <option value="">Toutes les catégories</option>
+                        {% for cat in income_categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-outline-success">
+                        <i class="fas fa-search"></i> Filtrer
+                    </button>
+                    {% if selected_category %}
+                    <a href="{{ url_for('incomes') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Effacer
+                    </a>
                     {% endif %}
-                    
-                    {% for page_num in incomes.iter_pages() %}
-                        {% if page_num %}
-                            <li class="page-item {% if page_num == incomes.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('incomes', page=page_num) }}">{{ page_num }}</a>
-                            </li>
-                        {% else %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if incomes.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('incomes', page=incomes.next_num) }}">Suivant</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% else %}
-            <p class="text-muted text-center">Aucun revenu enregistré.</p>
-        {% endif %}
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Liste des revenus -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Mes Revenus
+                    {% if selected_category %}
+                    <span class="badge bg-success ms-2">{{ selected_category }}</span>
+                    {% endif %}
+                </h5>
+                <span class="text-muted">{{ incomes.total }} revenu(s)</span>
+            </div>
+            <div class="card-body">
+                {% if incomes.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Catégorie</th>
+                                <th>Description</th>
+                                <th class="text-end">Montant</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for income in incomes.items %}
+                            <tr>
+                                <td>{{ income.date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ income.category }}</span>
+                                </td>
+                                <td>{{ income.description or '-' }}</td>
+                                <td class="text-end">
+                                    <strong class="text-success">{{ "%.3f"|format(income.amount) }} DT</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('edit_income', income_id=income.id) }}" 
+                                           class="btn btn-sm btn-outline-success" 
+                                           title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteIncome({{ income.id }})"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if incomes.pages > 1 %}
+                <nav aria-label="Navigation des revenus" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if incomes.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('incomes', page=incomes.prev_num, category=selected_category) }}">
+                                <i class="fas fa-chevron-left"></i> Précédent
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-left"></i> Précédent</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in incomes.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == incomes.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('incomes', page=page_num, category=selected_category) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if incomes.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('incomes', page=incomes.next_num, category=selected_category) }}">
+                                Suivant <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Suivant <i class="fas fa-chevron-right"></i></span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-coins fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun revenu trouvé</h5>
+                    <p class="text-muted">
+                        {% if selected_category %}
+                        Aucun revenu dans la catégorie "{{ selected_category }}".
+                        {% else %}
+                        Vous n'avez encore ajouté aucun revenu.
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('add_income') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Ajouter mon premier revenu
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteIncome(incomeId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce revenu ? Cette action est irréversible.')) {
+        fetch(`/delete_income/${incomeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la suppression du revenu.');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression du revenu.');
+        });
+    }
+}
+</script>
 {% endblock %}
